@@ -1,0 +1,247 @@
+// FinanZen — Prisma schema
+// Prisma is the query layer NestJS uses against Supabase PostgreSQL.
+// The tables, enums, triggers and RLS policies are owned by the SQL
+// migrations in /supabase (source of truth for schema shape); this file
+// mirrors that shape so Prisma Client can query it safely.
+//
+// IMPORTANT: Prisma connects using a service-role-level Postgres role for
+// the backend, so RLS's auth.uid() context is NOT automatically applied to
+// Prisma queries the way it is for requests made directly through the
+// Supabase client. Every query in this codebase MUST include an explicit
+// `where: { userId: currentUser.id }` (or equivalent) — never rely on RLS
+// alone when going through Prisma.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  USER
+  SUPPORT
+  AUDITOR
+  ADMIN
+  SUPER_ADMIN
+
+  @@map("user_role")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+
+  @@map("user_status")
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+
+  @@map("transaction_type")
+}
+
+enum PaymentMethod {
+  CASH
+  DEBIT
+  CREDIT
+  TRANSFER
+  YAPE
+  PLIN
+  OTHER
+
+  @@map("payment_method")
+}
+
+enum GoalStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+
+  @@map("goal_status")
+}
+
+enum GoalMovementType {
+  DEPOSIT
+  WITHDRAWAL
+
+  @@map("goal_movement_type")
+}
+
+enum ThemeMode {
+  LIGHT
+  DARK
+  SYSTEM
+
+  @@map("theme_mode")
+}
+
+model Profile {
+  id          String     @id @db.Uuid
+  firstName   String     @map("first_name")
+  lastName    String     @map("last_name")
+  phone       String?
+  avatarUrl   String?    @map("avatar_url")
+  role        UserRole   @default(USER)
+  status      UserStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  lastLoginAt DateTime?  @map("last_login_at")
+
+  categories    Category[]
+  transactions  Transaction[]
+  budgets       Budget[]
+  savingsGoals  SavingsGoal[]
+  goalMovements GoalMovement[]
+  preferences   UserPreferences?
+  notifications Notification[]
+  auditLogs     AuditLog[]        @relation("AuditActor")
+
+  @@map("profiles")
+}
+
+model Category {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String?          @map("user_id") @db.Uuid
+  name      String
+  icon      String?
+  type      TransactionType
+  isDefault Boolean          @default(false) @map("is_default")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user         Profile?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@index([userId])
+  @@map("categories")
+}
+
+model Transaction {
+  id               String          @id @default(uuid()) @db.Uuid
+  userId           String          @map("user_id") @db.Uuid
+  categoryId       String          @map("category_id") @db.Uuid
+  type             TransactionType
+  amount           Decimal         @db.Decimal(14, 2)
+  description      String?
+  paymentMethod    PaymentMethod   @default(CASH) @map("payment_method")
+  transactionDate  DateTime        @default(now()) @map("transaction_date")
+  notes            String?
+  deletedAt        DateTime?       @map("deleted_at")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  user     Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([userId, transactionDate])
+  @@index([userId, categoryId])
+  @@index([userId, type, transactionDate])
+  @@map("transactions")
+}
+
+model Budget {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  categoryId       String   @map("category_id") @db.Uuid
+  amount           Decimal  @db.Decimal(14, 2)
+  month            Int      @db.SmallInt
+  year             Int      @db.SmallInt
+  alertPercentage  Int      @default(80) @map("alert_percentage") @db.SmallInt
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user     Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId, month, year])
+  @@index([userId, year, month])
+  @@map("budgets")
+}
+
+model SavingsGoal {
+  id            String     @id @default(uuid()) @db.Uuid
+  userId        String     @map("user_id") @db.Uuid
+  name          String
+  description   String?
+  targetAmount  Decimal    @map("target_amount") @db.Decimal(14, 2)
+  currentAmount Decimal    @default(0) @map("current_amount") @db.Decimal(14, 2)
+  targetDate    DateTime?  @map("target_date") @db.Date
+  status        GoalStatus @default(ACTIVE)
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  user      Profile        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movements GoalMovement[]
+
+  @@index([userId, status])
+  @@map("savings_goals")
+}
+
+model GoalMovement {
+  id        String           @id @default(uuid()) @db.Uuid
+  goalId    String           @map("goal_id") @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  type      GoalMovementType
+  amount    Decimal          @db.Decimal(14, 2)
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  goal SavingsGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  user Profile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+  @@index([userId])
+  @@map("goal_movements")
+}
+
+model UserPreferences {
+  id                    String    @id @default(uuid()) @db.Uuid
+  userId                String    @unique @map("user_id") @db.Uuid
+  currency              String    @default("PEN")
+  themeMode             ThemeMode @default(SYSTEM) @map("theme_mode")
+  primaryColor          String    @default("#16A34A") @map("primary_color")
+  locale                String    @default("es-PE")
+  notificationsEnabled  Boolean   @default(true) @map("notifications_enabled")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  title     String
+  body      String?
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  actorUserId  String?  @map("actor_user_id") @db.Uuid
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String?  @map("resource_id")
+  metadata     Json?
+  ip           String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  actor Profile? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([actorUserId, createdAt])
+  @@map("audit_logs")
+}
