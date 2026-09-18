@@ -1,0 +1,33 @@
+# Render Blueprint — backend NestJS de FinanZen.
+# Las variables con `sync: false` se piden en el dashboard de Render al crear
+# el servicio; nunca se guardan en el repositorio.
+services:
+  - type: web
+    name: finanzen-api
+    runtime: node
+    region: ohio
+    plan: free
+    # Monorepo npm workspaces: se construye desde la raíz del repositorio.
+    # --include=dev: Render fija NODE_ENV=production y sin esto no se
+    # instalarían TypeScript ni Nest CLI, necesarios para compilar.
+    buildCommand: npm ci --include=dev && npm run prisma:generate && npm run build:api
+    startCommand: node apps/api/dist/main
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
