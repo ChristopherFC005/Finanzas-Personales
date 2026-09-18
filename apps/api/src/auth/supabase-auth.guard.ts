@@ -5,16 +5,9 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { Request } from "express";
-import * as jwt from "jsonwebtoken";
 import { PrismaService } from "../common/prisma/prisma.service";
 import { AuthenticatedUser } from "./auth.types";
-
-interface SupabaseJwtPayload {
-  sub: string;
-  email?: string;
-  role?: string;
-  exp: number;
-}
+import { SupabaseTokenVerifier } from "./supabase-token-verifier";
 
 /**
  * Verifies the Supabase-issued access token on every protected request and
@@ -26,7 +19,10 @@ interface SupabaseJwtPayload {
  */
 @Injectable()
 export class SupabaseAuthGuard implements CanActivate {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tokenVerifier: SupabaseTokenVerifier,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -36,19 +32,7 @@ export class SupabaseAuthGuard implements CanActivate {
       throw new UnauthorizedException("Falta el token de autenticación.");
     }
 
-    const secret = process.env.SUPABASE_JWT_SECRET;
-    if (!secret) {
-      throw new Error("SUPABASE_JWT_SECRET no está configurado.");
-    }
-
-    let payload: SupabaseJwtPayload;
-    try {
-      payload = jwt.verify(token, secret, {
-        algorithms: ["HS256"],
-      }) as SupabaseJwtPayload;
-    } catch {
-      throw new UnauthorizedException("Token inválido o expirado.");
-    }
+    const payload = await this.tokenVerifier.verify(token);
 
     const profile = await this.prisma.profile.findUnique({
       where: { id: payload.sub },

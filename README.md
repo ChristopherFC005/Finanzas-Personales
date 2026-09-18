@@ -122,7 +122,9 @@ Variables de entorno:
 
 - `NODE_ENV`, `PORT` (Render lo inyecta; NestJS escucha `process.env.PORT`)
 - `DATABASE_URL`, `DIRECT_URL`
-- `SUPABASE_URL`, `SUPABASE_JWT_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_URL` (los tokens ES256/RS256 se verifican con el JWKS público del proyecto)
+- `SUPABASE_JWT_SECRET` solo si el proyecto usa el secreto legacy HS256; si no, déjalo vacío
+- `SUPABASE_SERVICE_ROLE_KEY`
 - `FRONTEND_URL` (usado para configurar CORS sin wildcard)
 - `ANTHROPIC_API_KEY` (asistente financiero)
 

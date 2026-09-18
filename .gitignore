@@ -39,5 +39,10 @@ Thumbs.db
 # Vercel
 .vercel
 
+# Python
+__pycache__/
+*.pyc
+.venv/
+
 # TypeScript build info
 *.tsbuildinfo

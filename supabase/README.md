@@ -30,6 +30,23 @@ confirmación y de recuperación de contraseña si lo deseas (opcional).
 
 ## 3. Ejecutar las migraciones SQL
 
+### Opción A: script Python (recomendada)
+
+Con `DIRECT_URL` (Session pooler, puerto 5432) definida en `apps/api/.env`:
+
+```bash
+pip install -r supabase/requirements.txt
+python supabase/apply_schema.py --dry-run
+python supabase/apply_schema.py
+```
+
+Aplica en orden `migrations/`, `policies/` y `seed/`. Cada archivo corre en una
+transacción y queda registrado en `public.schema_migrations`, por lo que es
+seguro volver a ejecutarlo: solo aplica lo que falta. Los nuevos cambios de
+esquema se agregan como archivos `000X_*.sql` nuevos, nunca editando los ya aplicados.
+
+### Opción B: manual
+
 Con el [Supabase CLI](https://supabase.com/docs/guides/cli) enlazado a tu
 proyecto, o pegando el contenido directamente en **SQL Editor** del
 dashboard, ejecuta en orden:
