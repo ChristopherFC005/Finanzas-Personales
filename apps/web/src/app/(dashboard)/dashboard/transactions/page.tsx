@@ -81,6 +81,7 @@ export default function TransactionsPage() {
                   <th className="px-4 py-3 font-medium">Fecha</th>
                   <th className="px-4 py-3 font-medium">Descripción</th>
                   <th className="px-4 py-3 font-medium">Categoría</th>
+                  <th className="px-4 py-3 font-medium">Cuenta</th>
                   <th className="px-4 py-3 font-medium">Método</th>
                   <th className="px-4 py-3 text-right font-medium">Monto</th>
                   <th className="px-4 py-3" />
@@ -94,6 +95,7 @@ export default function TransactionsPage() {
                     </td>
                     <td className="px-4 py-3">{t.description || "—"}</td>
                     <td className="px-4 py-3">{t.category.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{t.account?.name ?? "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{t.paymentMethod}</td>
                     <td
                       className={cn(

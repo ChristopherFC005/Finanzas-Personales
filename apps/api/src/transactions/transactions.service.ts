@@ -23,6 +23,7 @@ export class TransactionsService {
       deletedAt: null,
       type: query.type,
       categoryId: query.categoryId,
+      accountId: query.accountId,
       paymentMethod: query.paymentMethod,
       transactionDate:
         query.dateFrom || query.dateTo
@@ -39,7 +40,7 @@ export class TransactionsService {
     const [data, total] = await this.prisma.$transaction([
       this.prisma.transaction.findMany({
         where,
-        include: { category: true },
+        include: { category: true, account: true },
         orderBy: { [query.sortBy ?? "transactionDate"]: query.sortOrder ?? "desc" },
         skip: (page - 1) * limit,
         take: limit,
@@ -53,7 +54,7 @@ export class TransactionsService {
   async findOne(userId: string, id: string) {
     const transaction = await this.prisma.transaction.findFirst({
       where: { id, userId, deletedAt: null },
-      include: { category: true },
+      include: { category: true, account: true },
     });
     if (!transaction) {
       throw new NotFoundException("Transacción no encontrada.");
@@ -63,10 +64,14 @@ export class TransactionsService {
 
   async create(userId: string, dto: CreateTransactionDto) {
     await this.assertCategoryUsable(userId, dto.categoryId);
+    if (dto.accountId) {
+      await this.assertAccountOwned(userId, dto.accountId);
+    }
     return this.prisma.transaction.create({
       data: {
         userId,
         categoryId: dto.categoryId,
+        accountId: dto.accountId,
         type: dto.type,
         amount: dto.amount,
         description: dto.description,
@@ -74,7 +79,7 @@ export class TransactionsService {
         transactionDate: new Date(dto.transactionDate),
         notes: dto.notes,
       },
-      include: { category: true },
+      include: { category: true, account: true },
     });
   }
 
@@ -82,6 +87,9 @@ export class TransactionsService {
     await this.findOne(userId, id);
     if (dto.categoryId) {
       await this.assertCategoryUsable(userId, dto.categoryId);
+    }
+    if (dto.accountId) {
+      await this.assertAccountOwned(userId, dto.accountId);
     }
     return this.prisma.transaction.update({
       where: { id },
@@ -91,7 +99,7 @@ export class TransactionsService {
           ? new Date(dto.transactionDate)
           : undefined,
       },
-      include: { category: true },
+      include: { category: true, account: true },
     });
   }
 
@@ -112,6 +120,15 @@ export class TransactionsService {
     });
     if (!category || (category.userId !== null && category.userId !== userId)) {
       throw new BadRequestException("Categoría inválida.");
+    }
+  }
+
+  private async assertAccountOwned(userId: string, accountId: string): Promise<void> {
+    const account = await this.prisma.account.findUnique({
+      where: { id: accountId },
+    });
+    if (!account || account.userId !== userId) {
+      throw new BadRequestException("Cuenta inválida.");
     }
   }
 }

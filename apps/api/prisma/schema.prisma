@@ -81,6 +81,16 @@ enum ThemeMode {
   @@map("theme_mode")
 }
 
+enum AccountType {
+  CASH
+  DEBIT
+  CREDIT
+  SAVINGS
+  OTHER
+
+  @@map("account_type")
+}
+
 model Profile {
   id          String     @id @db.Uuid
   firstName   String     @map("first_name")
@@ -95,6 +105,7 @@ model Profile {
 
   categories    Category[]
   transactions  Transaction[]
+  accounts      Account[]
   budgets       Budget[]
   savingsGoals  SavingsGoal[]
   goalMovements GoalMovement[]
@@ -122,10 +133,31 @@ model Category {
   @@map("categories")
 }
 
+model Account {
+  id             String      @id @default(uuid()) @db.Uuid
+  userId         String      @map("user_id") @db.Uuid
+  name           String
+  type           AccountType
+  bank           String?
+  initialBalance Decimal     @default(0) @map("initial_balance") @db.Decimal(14, 2)
+  creditLimit    Decimal?    @map("credit_limit") @db.Decimal(14, 2)
+  color          String?
+  isActive       Boolean     @default(true) @map("is_active")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  user         Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+  @@map("accounts")
+}
+
 model Transaction {
   id               String          @id @default(uuid()) @db.Uuid
   userId           String          @map("user_id") @db.Uuid
   categoryId       String          @map("category_id") @db.Uuid
+  accountId        String?         @map("account_id") @db.Uuid
   type             TransactionType
   amount           Decimal         @db.Decimal(14, 2)
   description      String?
@@ -138,10 +170,12 @@ model Transaction {
 
   user     Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
   category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  account  Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
   @@index([userId, transactionDate])
   @@index([userId, categoryId])
   @@index([userId, type, transactionDate])
+  @@index([userId, accountId])
   @@map("transactions")
 }
 

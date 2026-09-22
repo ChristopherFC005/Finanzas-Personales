@@ -26,6 +26,10 @@ export class CreateTransactionDto {
   categoryId!: string;
 
   @IsOptional()
+  @IsUUID()
+  accountId?: string;
+
+  @IsOptional()
   @IsString()
   @MaxLength(255)
   description?: string;

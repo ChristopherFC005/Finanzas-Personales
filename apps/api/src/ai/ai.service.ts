@@ -1,6 +1,7 @@
 import { Injectable, ServiceUnavailableException } from "@nestjs/common";
 import { PrismaService } from "../common/prisma/prisma.service";
 import { StatisticsService } from "../statistics/statistics.service";
+import { AccountsService } from "../accounts/accounts.service";
 import { AskAssistantDto } from "./dto/ask-assistant.dto";
 
 /**
@@ -15,6 +16,7 @@ export class AiService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly statistics: StatisticsService,
+    private readonly accounts: AccountsService,
   ) {}
 
   async ask(userId: string, dto: AskAssistantDto): Promise<{ answer: string }> {
@@ -28,7 +30,7 @@ export class AiService {
     const month = now.getUTCMonth() + 1;
     const year = now.getUTCFullYear();
 
-    const [summary, budgets, goals] = await Promise.all([
+    const [summary, budgets, goals, accounts] = await Promise.all([
       this.statistics.summary(userId, { period: "this_month" }),
       this.prisma.budget.findMany({
         where: { userId, month, year },
@@ -38,6 +40,7 @@ export class AiService {
         where: { userId, status: "ACTIVE" },
         select: { name: true, targetAmount: true, currentAmount: true, targetDate: true },
       }),
+      this.accounts.findAll(userId),
     ]);
 
     return {
@@ -48,6 +51,13 @@ export class AiService {
         savingsRate: summary.savingsRate,
         topExpenseCategory: summary.topExpenseCategory?.name ?? null,
       },
+      accounts: accounts.map((a) => ({
+        name: a.name,
+        bank: a.bank,
+        type: a.type,
+        balance: a.currentBalance,
+      })),
+      totalBalance: accounts.reduce((sum, a) => sum + a.currentBalance, 0),
       budgets: budgets.map((b) => ({
         category: b.category.name,
         amount: Number(b.amount),

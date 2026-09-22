@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect } from "react";
 import { useCategories } from "@/hooks/use-categories";
+import { useAccounts } from "@/hooks/use-accounts";
 import { useCreateTransaction, TransactionInput } from "@/hooks/use-transactions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,7 @@ const schema = z.object({
     .string()
     .regex(/^\d{1,12}(\.\d{1,2})?$/, "Monto inválido."),
   categoryId: z.string().uuid("Selecciona una categoría."),
+  accountId: z.union([z.string().uuid(), z.literal("")]).optional(),
   transactionDate: z.string().min(1, "Selecciona una fecha."),
   paymentMethod: z.string(),
   description: z.string().optional(),
@@ -53,6 +55,7 @@ export function TransactionForm({ onSuccess }: { onSuccess: () => void }) {
 
   const type = watch("type");
   const { data: categories } = useCategories(type);
+  const { data: accounts } = useAccounts();
   const createTransaction = useCreateTransaction();
 
   useEffect(() => {
@@ -60,7 +63,10 @@ export function TransactionForm({ onSuccess }: { onSuccess: () => void }) {
   }, [type, setValue]);
 
   async function onSubmit(values: FormValues) {
-    await createTransaction.mutateAsync(values as TransactionInput);
+    await createTransaction.mutateAsync({
+      ...values,
+      accountId: values.accountId || undefined,
+    } as TransactionInput);
     onSuccess();
   }
 
@@ -116,6 +122,21 @@ export function TransactionForm({ onSuccess }: { onSuccess: () => void }) {
           <p className="mt-1 text-xs text-danger">{errors.categoryId.message}</p>
         )}
       </div>
+
+      {accounts && accounts.length > 0 && (
+        <div>
+          <Label htmlFor="accountId">Cuenta (opcional)</Label>
+          <Select id="accountId" {...register("accountId")}>
+            <option value="">Sin cuenta específica</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+                {a.bank ? ` · ${a.bank}` : ""}
+              </option>
+            ))}
+          </Select>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div>

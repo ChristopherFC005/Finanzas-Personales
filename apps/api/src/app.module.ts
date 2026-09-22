@@ -6,6 +6,7 @@ import { PrismaModule } from "./common/prisma/prisma.module";
 import { AuthModule } from "./auth/auth.module";
 import { HealthModule } from "./health/health.module";
 import { UsersModule } from "./users/users.module";
+import { AccountsModule } from "./accounts/accounts.module";
 import { CategoriesModule } from "./categories/categories.module";
 import { TransactionsModule } from "./transactions/transactions.module";
 import { BudgetsModule } from "./budgets/budgets.module";
@@ -28,6 +29,7 @@ import { AiModule } from "./ai/ai.module";
     AuthModule,
     HealthModule,
     UsersModule,
+    AccountsModule,
     CategoriesModule,
     TransactionsModule,
     BudgetsModule,

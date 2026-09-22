@@ -12,6 +12,10 @@ export class QueryTransactionsDto extends PaginationQueryDto {
   categoryId?: string;
 
   @IsOptional()
+  @IsUUID()
+  accountId?: string;
+
+  @IsOptional()
   @IsEnum(PaymentMethod)
   paymentMethod?: PaymentMethod;
 
