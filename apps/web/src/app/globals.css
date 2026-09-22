@@ -3,48 +3,101 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8fafc;
+  --background: #f6f7fb;
   --surface: #ffffff;
-  --foreground: #0f172a;
-  --border: #e2e8f0;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
+  --surface-glass: rgba(255, 255, 255, 0.7);
+  --foreground: #0b0f19;
+  --border: #e4e7ee;
+  --muted: #eef0f6;
+  --muted-foreground: #5b6172;
 
-  --success: #16a34a;
+  --success: #10b981;
   --warning: #d97706;
   --danger: #dc2626;
   --info: #2563eb;
 
+  /* Fixed brand accent for AI / "premium" surfaces — independent of the
+     user's chosen primary color, so FinanZen keeps a distinct tech identity
+     even when someone picks red or orange as their primary. */
+  --accent: #8b5cf6;
+  --accent-hover: #7c3aed;
+  --accent-foreground: #ffffff;
+
   /* Overridden at runtime by ThemeProvider from the user's chosen color. */
-  --primary: #16a34a;
-  --primary-hover: #15803d;
-  --primary-active: #166534;
-  --primary-muted: #dcfce7;
+  --primary: #10b981;
+  --primary-hover: #059669;
+  --primary-active: #047857;
+  --primary-muted: #d1fae5;
   --primary-foreground: #ffffff;
-  --focus-ring: #16a34a;
+  --focus-ring: #10b981;
+
+  --glow: 0 0 0 1px color-mix(in srgb, var(--primary) 15%, transparent),
+    0 8px 30px -8px color-mix(in srgb, var(--primary) 35%, transparent);
 }
 
 :root[data-theme="dark"] {
-  --background: #0b1220;
-  --surface: #111827;
-  --foreground: #f1f5f9;
-  --border: #1f2937;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
+  --background: #05070d;
+  --surface: #0d1220;
+  --surface-glass: rgba(17, 23, 41, 0.6);
+  --foreground: #f2f4f8;
+  --border: rgba(255, 255, 255, 0.08);
+  --muted: rgba(255, 255, 255, 0.05);
+  --muted-foreground: #8b91a7;
 
-  --success: #22c55e;
+  --success: #34d399;
   --warning: #f59e0b;
-  --danger: #ef4444;
-  --info: #38bdf8;
+  --danger: #f87171;
+  --info: #60a5fa;
+
+  --accent: #a78bfa;
+  --accent-hover: #c4b5fd;
+
+  --glow: 0 0 0 1px color-mix(in srgb, var(--primary) 25%, transparent),
+    0 8px 40px -6px color-mix(in srgb, var(--primary) 45%, transparent);
 }
 
 * {
   border-color: var(--border);
 }
 
+html {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
 body {
   background-color: var(--background);
   color: var(--foreground);
+  position: relative;
+  min-height: 100vh;
+}
+
+/* Soft animated gradient mesh — only rendered in dark mode, where the
+   brand's "tech" identity actually reads. Fixed so it never scrolls with
+   content, pointer-events none so it never blocks clicks, and z-index: -1
+   (with position: fixed) so it paints behind every normal in-flow element
+   on the page without needing every page root to opt into a stacking
+   context — a positive z-index here would instead float ABOVE static
+   content, since fixed elements form their own stacking context. */
+:root[data-theme="dark"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(600px circle at 10% -10%, color-mix(in srgb, var(--primary) 22%, transparent), transparent 60%),
+    radial-gradient(500px circle at 110% 10%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 60%),
+    radial-gradient(800px circle at 50% 120%, color-mix(in srgb, var(--primary) 10%, transparent), transparent 60%);
+  opacity: 0.9;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.font-display {
+  font-family: var(--font-display), var(--font-sans), sans-serif;
 }
 
 .focus-ring {
@@ -52,4 +105,56 @@ body {
 }
 .focus-ring:focus-visible {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 35%, transparent);
+}
+
+/* Glassmorphism surface used by <Card />. Falls back to a flat surface in
+   browsers without backdrop-filter support. */
+.glass-surface {
+  background: var(--surface-glass);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.gradient-text {
+  background: linear-gradient(120deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.gradient-brand {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+}
+
+.grid-pattern {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--border) 60%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 60%, transparent) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
+}
+
+@keyframes blob-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(4%, -6%) scale(1.05); }
+  66% { transform: translate(-3%, 4%) scale(0.97); }
+}
+.animate-blob {
+  animation: blob-float 18s ease-in-out infinite;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-blob,
+  .animate-fade-up {
+    animation: none;
+  }
 }

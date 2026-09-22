@@ -18,7 +18,7 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   }
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border bg-surface px-4 md:px-6">
+    <header className="glass-surface sticky top-0 z-20 flex h-16 items-center justify-between border-l-0 border-r-0 border-t-0 px-4 md:px-6">
       <button
         className="rounded-lg p-2 hover:bg-muted md:hidden"
         onClick={onMenuClick}
@@ -27,11 +27,16 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
         <Menu className="h-5 w-5" />
       </button>
 
-      <div className="hidden md:block">
+      <div className="hidden items-center gap-3 md:flex">
         {user && (
-          <p className="text-sm text-muted-foreground">
-            Hola, <span className="font-medium text-foreground">{user.firstName}</span>
-          </p>
+          <>
+            <span className="flex h-8 w-8 items-center justify-center rounded-full gradient-brand text-xs font-semibold text-white">
+              {user.firstName.charAt(0).toUpperCase()}
+            </span>
+            <p className="text-sm text-muted-foreground">
+              Hola, <span className="font-medium text-foreground">{user.firstName}</span>
+            </p>
+          </>
         )}
       </div>
 

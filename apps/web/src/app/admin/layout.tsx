@@ -38,10 +38,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="hidden w-64 flex-col border-r border-border bg-surface md:flex">
-        <div className="flex h-16 items-center px-6">
-          <span className="text-lg font-bold text-primary">FinanZen</span>
-          <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+      <aside className="glass-surface hidden w-64 flex-col border-l-0 border-t-0 md:flex">
+        <div className="flex h-16 items-center gap-2 px-6">
+          <span className="font-display text-lg font-bold gradient-text">FinanZen</span>
+          <span className="rounded bg-accent/15 px-1.5 py-0.5 text-xs font-medium text-accent">
             Admin
           </span>
         </div>
@@ -51,9 +51,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
                 pathname === item.href
-                  ? "bg-primary-muted text-primary"
+                  ? "gradient-brand text-white shadow-glow"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >

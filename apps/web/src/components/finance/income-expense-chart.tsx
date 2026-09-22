@@ -35,10 +35,11 @@ export function IncomeExpenseChart({
             <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={12} />
             <YAxis stroke="var(--muted-foreground)" fontSize={12} />
             <Tooltip
+              cursor={{ fill: "var(--muted)" }}
               contentStyle={{
                 backgroundColor: "var(--surface)",
                 border: "1px solid var(--border)",
-                borderRadius: 8,
+                borderRadius: 12,
                 color: "var(--foreground)",
               }}
               formatter={(value: number) => formatMoney(value, currency)}

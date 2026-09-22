@@ -20,28 +20,31 @@ export function StatCard({
   const positive = (changeRatio ?? 0) >= 0;
 
   return (
-    <Card>
-      <div className="flex items-start justify-between">
+    <Card className="group relative overflow-hidden">
+      <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full gradient-brand opacity-10 blur-2xl transition-opacity group-hover:opacity-20" />
+
+      <div className="relative flex items-start justify-between">
         <div>
-          <p className="text-sm text-muted-foreground">{label}</p>
+          <p className="text-sm font-medium text-muted-foreground">{label}</p>
           <p
             className={cn(
-              "mt-2 text-2xl font-semibold tracking-tight",
+              "mt-2 font-display text-3xl font-semibold tracking-tight",
               tone === "success" && "text-success",
               tone === "danger" && "text-danger",
+              tone === "default" && "gradient-text",
             )}
           >
             {formatMoney(amount, currency)}
           </p>
         </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-muted text-primary">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl gradient-brand text-white shadow-glow">
           <Icon className="h-5 w-5" />
         </div>
       </div>
       {changeRatio !== undefined && changeRatio !== null && (
         <div
           className={cn(
-            "mt-3 inline-flex items-center gap-1 text-xs font-medium",
+            "relative mt-3 inline-flex items-center gap-1 text-xs font-medium",
             positive ? "text-success" : "text-danger",
           )}
         >

@@ -13,6 +13,11 @@ const config: Config = {
           muted: "var(--primary-muted)",
           foreground: "var(--primary-foreground)",
         },
+        accent: {
+          DEFAULT: "var(--accent)",
+          hover: "var(--accent-hover)",
+          foreground: "var(--accent-foreground)",
+        },
         success: "var(--success)",
         warning: "var(--warning)",
         danger: "var(--danger)",
@@ -26,12 +31,18 @@ const config: Config = {
           foreground: "var(--muted-foreground)",
         },
       },
+      fontFamily: {
+        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "var(--font-sans)", "sans-serif"],
+      },
       borderRadius: {
         lg: "1rem",
         xl: "1.25rem",
+        "2xl": "1.75rem",
       },
       boxShadow: {
         card: "0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 6px -1px rgb(0 0 0 / 0.06)",
+        glow: "var(--glow)",
       },
     },
   },

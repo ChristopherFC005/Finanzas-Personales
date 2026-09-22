@@ -113,11 +113,11 @@ export function generatePrimaryScale(
 }
 
 export const PRESET_COLORS: { name: string; hex: string }[] = [
-  { name: "Verde", hex: "#16A34A" },
+  { name: "Esmeralda", hex: "#10B981" },
+  { name: "Violeta", hex: "#8B5CF6" },
   { name: "Azul", hex: "#2563EB" },
   { name: "Celeste", hex: "#0EA5E9" },
   { name: "Turquesa", hex: "#0D9488" },
-  { name: "Morado", hex: "#7C3AED" },
   { name: "Índigo", hex: "#4F46E5" },
   { name: "Rosa", hex: "#DB2777" },
   { name: "Naranja", hex: "#EA580C" },

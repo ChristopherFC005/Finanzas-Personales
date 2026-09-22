@@ -24,7 +24,8 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 const STORAGE_KEY = "finanzen-theme";
-const DEFAULT_COLOR = "#16A34A";
+const DEFAULT_COLOR = "#10B981";
+const DEFAULT_MODE: ThemeMode = "DARK";
 
 function applyTheme(mode: ThemeMode, color: string) {
   const root = document.documentElement;
@@ -45,7 +46,7 @@ function applyTheme(mode: ThemeMode, color: string) {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [themeMode, setThemeModeState] = useState<ThemeMode>("SYSTEM");
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(DEFAULT_MODE);
   const [primaryColor, setPrimaryColorState] = useState(DEFAULT_COLOR);
   const [resolvedDark, setResolvedDark] = useState(false);
 
@@ -63,10 +64,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         setPrimaryColorState(parsed.primaryColor);
         setResolvedDark(applyTheme(parsed.themeMode, parsed.primaryColor));
       } else {
-        setResolvedDark(applyTheme("SYSTEM", DEFAULT_COLOR));
+        setResolvedDark(applyTheme(DEFAULT_MODE, DEFAULT_COLOR));
       }
     } catch {
-      setResolvedDark(applyTheme("SYSTEM", DEFAULT_COLOR));
+      setResolvedDark(applyTheme(DEFAULT_MODE, DEFAULT_COLOR));
     }
 
     apiClient

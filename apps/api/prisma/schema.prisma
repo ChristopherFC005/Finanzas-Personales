@@ -203,8 +203,8 @@ model UserPreferences {
   id                    String    @id @default(uuid()) @db.Uuid
   userId                String    @unique @map("user_id") @db.Uuid
   currency              String    @default("PEN")
-  themeMode             ThemeMode @default(SYSTEM) @map("theme_mode")
-  primaryColor          String    @default("#16A34A") @map("primary_color")
+  themeMode             ThemeMode @default(DARK) @map("theme_mode")
+  primaryColor          String    @default("#10B981") @map("primary_color")
   locale                String    @default("es-PE")
   notificationsEnabled  Boolean   @default(true) @map("notifications_enabled")
   createdAt             DateTime  @default(now()) @map("created_at")
