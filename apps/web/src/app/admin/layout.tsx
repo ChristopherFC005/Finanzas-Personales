@@ -2,19 +2,28 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Users, ShieldAlert } from "lucide-react";
+import { LayoutDashboard, Users, ScrollText, ShieldAlert, LogOut } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/users", label: "Usuarios", icon: Users },
+  { href: "/admin/audit-logs", label: "Auditoría", icon: ScrollText },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: user, isLoading } = useCurrentUser();
+
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   if (isLoading) {
     return <div className="p-6 text-muted-foreground">Cargando…</div>;
@@ -62,6 +71,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </Link>
           ))}
         </nav>
+        <div className="space-y-1 border-t border-border p-3">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <LayoutDashboard className="h-4 w-4" />
+            Volver a mi cuenta
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-danger"
+          >
+            <LogOut className="h-4 w-4" />
+            Salir
+          </button>
+        </div>
       </aside>
       <main className="flex-1 overflow-y-auto p-6">{children}</main>
     </div>

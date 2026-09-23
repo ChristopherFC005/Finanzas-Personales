@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
@@ -18,6 +19,7 @@ import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { AuthenticatedUser } from "../auth/auth.types";
 import { AdminService } from "./admin.service";
 import { QueryAdminUsersDto } from "./dto/query-admin-users.dto";
+import { UpdateUserRoleDto } from "./dto/update-user-role.dto";
 import { PaginationQueryDto } from "../common/pagination/pagination.dto";
 
 @ApiTags("admin")
@@ -61,6 +63,17 @@ export class AdminController {
     @Req() req: Request,
   ) {
     return this.adminService.reactivateUser(actor, id, req.ip);
+  }
+
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Patch("users/:id/role")
+  updateUserRole(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() dto: UpdateUserRoleDto,
+    @Req() req: Request,
+  ) {
+    return this.adminService.updateUserRole(actor, id, dto.role, req.ip);
   }
 
   @Get("audit-logs")

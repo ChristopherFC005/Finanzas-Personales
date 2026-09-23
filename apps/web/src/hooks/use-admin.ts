@@ -18,15 +18,29 @@ export interface AdminDashboard {
   }[];
 }
 
+export type UserRole = "USER" | "SUPPORT" | "AUDITOR" | "ADMIN" | "SUPER_ADMIN";
+
 export interface AdminUser {
   id: string;
   firstName: string;
   lastName: string;
   phone: string | null;
-  role: string;
+  role: UserRole;
   status: "ACTIVE" | "SUSPENDED" | "DELETED";
   createdAt: string;
   lastLoginAt: string | null;
+}
+
+export interface AuditLog {
+  id: string;
+  actorUserId: string | null;
+  actor: { firstName: string; lastName: string } | null;
+  action: string;
+  resourceType: string;
+  resourceId: string | null;
+  metadata: Record<string, unknown> | null;
+  ip: string | null;
+  createdAt: string;
 }
 
 export function useAdminDashboard() {
@@ -60,5 +74,25 @@ export function useReactivateUser() {
   return useMutation({
     mutationFn: (id: string) => apiClient.patch(`/admin/users/${id}/reactivate`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "users"] }),
+  });
+}
+
+export function useUpdateUserRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, role }: { id: string; role: UserRole }) =>
+      apiClient.patch(`/admin/users/${id}/role`, { role }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "audit-logs"] });
+    },
+  });
+}
+
+export function useAuditLogs(page: number) {
+  return useQuery({
+    queryKey: ["admin", "audit-logs", page],
+    queryFn: () =>
+      apiClient.get<Paginated<AuditLog>>(`/admin/audit-logs?page=${page}&limit=20`),
   });
 }

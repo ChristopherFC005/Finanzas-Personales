@@ -1,19 +1,44 @@
 "use client";
 
 import { useState } from "react";
-import { useAdminUsers, useReactivateUser, useSuspendUser } from "@/hooks/use-admin";
+import {
+  useAdminUsers,
+  useReactivateUser,
+  useSuspendUser,
+  useUpdateUserRole,
+  UserRole,
+} from "@/hooks/use-admin";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, formatDate } from "@/lib/utils";
 
+const ROLE_LABELS: Record<UserRole, string> = {
+  USER: "Usuario",
+  SUPPORT: "Soporte",
+  AUDITOR: "Auditor",
+  ADMIN: "Admin",
+  SUPER_ADMIN: "Super Admin",
+};
+
+// An ADMIN can only hand out these roles; ADMIN/SUPER_ADMIN require being
+// a SUPER_ADMIN yourself — mirrors the check the backend actually enforces.
+const ADMIN_GRANTABLE: UserRole[] = ["USER", "SUPPORT", "AUDITOR"];
+const ALL_ROLES: UserRole[] = ["USER", "SUPPORT", "AUDITOR", "ADMIN", "SUPER_ADMIN"];
+
 export default function AdminUsersPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const { data: me } = useCurrentUser();
   const { data, isLoading } = useAdminUsers({ page, search: search || undefined });
   const suspend = useSuspendUser();
   const reactivate = useReactivateUser();
+  const updateRole = useUpdateUserRole();
+
+  const assignableRoles = me?.role === "SUPER_ADMIN" ? ALL_ROLES : ADMIN_GRANTABLE;
 
   return (
     <div className="space-y-6">
@@ -51,38 +76,76 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody>
-                {data?.data.map((u) => (
-                  <tr key={u.id} className="border-b border-border last:border-0">
-                    <td className="px-4 py-3">{u.firstName} {u.lastName}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{formatDate(u.createdAt)}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {u.lastLoginAt ? formatDate(u.lastLoginAt) : "—"}
-                    </td>
-                    <td className="px-4 py-3">{u.role}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-xs font-medium",
-                          u.status === "ACTIVE" && "bg-success/10 text-success",
-                          u.status === "SUSPENDED" && "bg-danger/10 text-danger",
+                {data?.data.map((u) => {
+                  const isSelf = u.id === me?.id;
+                  const isSuperAdminTarget = u.role === "SUPER_ADMIN";
+                  const canEditRole = !isSelf && !isSuperAdminTarget;
+                  // The dropdown must always include the user's current role
+                  // even if the actor couldn't grant it themselves, or the
+                  // <select> would silently jump to the first option.
+                  const roleOptions = assignableRoles.includes(u.role)
+                    ? assignableRoles
+                    : [u.role, ...assignableRoles];
+
+                  return (
+                    <tr key={u.id} className="border-b border-border last:border-0">
+                      <td className="px-4 py-3">
+                        {u.firstName} {u.lastName}
+                        {isSelf && (
+                          <span className="ml-2 text-xs text-muted-foreground">(tú)</span>
                         )}
-                      >
-                        {u.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {u.status === "ACTIVE" ? (
-                        <Button size="sm" variant="outline" onClick={() => suspend.mutate(u.id)}>
-                          Suspender
-                        </Button>
-                      ) : (
-                        <Button size="sm" variant="outline" onClick={() => reactivate.mutate(u.id)}>
-                          Reactivar
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{formatDate(u.createdAt)}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {u.lastLoginAt ? formatDate(u.lastLoginAt) : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {canEditRole ? (
+                          <Select
+                            value={u.role}
+                            className="h-8 w-36 text-xs"
+                            disabled={updateRole.isPending}
+                            onChange={(e) =>
+                              updateRole.mutate({ id: u.id, role: e.target.value as UserRole })
+                            }
+                          >
+                            {roleOptions.map((r) => (
+                              <option key={r} value={r}>
+                                {ROLE_LABELS[r]}
+                              </option>
+                            ))}
+                          </Select>
+                        ) : (
+                          <span className="text-muted-foreground">{ROLE_LABELS[u.role]}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-xs font-medium",
+                            u.status === "ACTIVE" && "bg-success/10 text-success",
+                            u.status === "SUSPENDED" && "bg-danger/10 text-danger",
+                          )}
+                        >
+                          {u.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {!isSelf && !isSuperAdminTarget && (
+                          u.status === "ACTIVE" ? (
+                            <Button size="sm" variant="outline" onClick={() => suspend.mutate(u.id)}>
+                              Suspender
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="outline" onClick={() => reactivate.mutate(u.id)}>
+                              Reactivar
+                            </Button>
+                          )
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
