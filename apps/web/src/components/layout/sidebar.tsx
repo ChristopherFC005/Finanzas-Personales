@@ -12,6 +12,7 @@ import {
   Sparkles,
   UserCircle,
   Zap,
+  HandCoins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/transactions", label: "Movimientos", icon: ArrowLeftRight },
   { href: "/dashboard/budgets", label: "Presupuestos", icon: Wallet },
   { href: "/dashboard/goals", label: "Metas", icon: Target },
+  { href: "/dashboard/loans", label: "Préstamos", icon: HandCoins },
   { href: "/dashboard/statistics", label: "Estadísticas", icon: BarChart3 },
   { href: "/dashboard/assistant", label: "Asistente IA", icon: Sparkles, accent: true },
   { href: "/dashboard/profile", label: "Perfil", icon: UserCircle },

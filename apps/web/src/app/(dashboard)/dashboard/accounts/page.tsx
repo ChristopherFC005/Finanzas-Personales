@@ -1,45 +1,34 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { Plus, Wallet } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { AccountInput, AccountType, useAccounts, useCreateAccount } from "@/hooks/use-accounts";
-import { PERU_BANKS, ACCOUNT_TYPE_LABELS } from "@/lib/accounts";
+import { Account, useAccounts } from "@/hooks/use-accounts";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AccountCard } from "@/components/finance/account-card";
+import { AccountForm } from "@/components/finance/account-form";
 import { formatMoney } from "@/lib/utils";
-
-const ACCOUNT_TYPES: AccountType[] = ["CASH", "DEBIT", "CREDIT", "SAVINGS", "OTHER"];
 
 export default function AccountsPage() {
   const [open, setOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const { data: user } = useCurrentUser();
   const currency = user?.preferences?.currency ?? "PEN";
   const { data: accounts, isLoading } = useAccounts();
-  const createAccount = useCreateAccount();
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<AccountInput>({ defaultValues: { type: "DEBIT", initialBalance: "0" } });
-
-  const type = watch("type");
   const total = accounts?.reduce((sum, a) => sum + a.currentBalance, 0) ?? 0;
 
-  async function onSubmit(values: AccountInput) {
-    await createAccount.mutateAsync(values);
-    reset({ type: "DEBIT", initialBalance: "0" });
-    setOpen(false);
+  function openCreate() {
+    setEditingAccount(null);
+    setOpen(true);
+  }
+
+  function openEdit(account: Account) {
+    setEditingAccount(account);
+    setOpen(true);
   }
 
   return (
@@ -51,7 +40,7 @@ export default function AccountsPage() {
             Saldo total: <span className="gradient-text font-semibold">{formatMoney(total, currency)}</span>
           </p>
         </div>
-        <Button onClick={() => setOpen(true)}>
+        <Button onClick={openCreate}>
           <Plus className="h-4 w-4" />
           Nueva cuenta
         </Button>
@@ -69,7 +58,7 @@ export default function AccountsPage() {
           title="Aún no tienes cuentas registradas"
           description="Agrega tu efectivo, tarjeta de débito o crédito con el saldo con el que empiezas."
           action={
-            <Button onClick={() => setOpen(true)}>
+            <Button onClick={openCreate}>
               <Plus className="h-4 w-4" />
               Agregar mi primera cuenta
             </Button>
@@ -78,82 +67,17 @@ export default function AccountsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {accounts.map((a) => (
-            <AccountCard key={a.id} account={a} currency={currency} />
+            <AccountCard key={a.id} account={a} currency={currency} onEdit={() => openEdit(a)} />
           ))}
         </div>
       )}
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Nueva cuenta">
-        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-          <div>
-            <Label htmlFor="name">Nombre</Label>
-            <Input
-              id="name"
-              placeholder="Ej. BCP Débito"
-              {...register("name", { required: true })}
-              error={errors.name ? "Requerido" : undefined}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label htmlFor="type">Tipo</Label>
-              <Select id="type" {...register("type", { required: true })}>
-                {ACCOUNT_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {ACCOUNT_TYPE_LABELS[t]}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="bank">Banco</Label>
-              <Select id="bank" {...register("bank")}>
-                <option value="">Sin banco</option>
-                {PERU_BANKS.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="initialBalance">
-              Saldo inicial{" "}
-              <span className="font-normal text-muted-foreground">
-                (con cuánto empiezas hoy)
-              </span>
-            </Label>
-            <Input
-              id="initialBalance"
-              inputMode="decimal"
-              placeholder="0.00"
-              {...register("initialBalance", { pattern: /^-?\d{1,12}(\.\d{1,2})?$/ })}
-            />
-          </div>
-
-          {type === "CREDIT" && (
-            <div>
-              <Label htmlFor="creditLimit">Línea de crédito</Label>
-              <Input
-                id="creditLimit"
-                inputMode="decimal"
-                placeholder="0.00"
-                {...register("creditLimit", { pattern: /^\d{1,12}(\.\d{1,2})?$/ })}
-              />
-            </div>
-          )}
-
-          {createAccount.isError && (
-            <p className="text-sm text-danger">No se pudo crear la cuenta. Intenta nuevamente.</p>
-          )}
-
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            Guardar cuenta
-          </Button>
-        </form>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={editingAccount ? "Editar cuenta" : "Nueva cuenta"}
+      >
+        <AccountForm account={editingAccount ?? undefined} onSuccess={() => setOpen(false)} />
       </Modal>
     </div>
   );

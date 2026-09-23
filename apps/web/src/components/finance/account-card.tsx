@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { Account, useDeleteAccount } from "@/hooks/use-accounts";
 import { ACCOUNT_TYPE_ICONS, ACCOUNT_TYPE_LABELS } from "@/lib/accounts";
 import { cn, formatMoney } from "@/lib/utils";
@@ -8,9 +8,11 @@ import { cn, formatMoney } from "@/lib/utils";
 export function AccountCard({
   account,
   currency,
+  onEdit,
 }: {
   account: Account;
   currency: string;
+  onEdit: () => void;
 }) {
   const deleteAccount = useDeleteAccount();
   const Icon = ACCOUNT_TYPE_ICONS[account.type];
@@ -47,6 +49,13 @@ export function AccountCard({
         </div>
         <div className="flex items-center gap-2">
           <Icon className="h-6 w-6 text-white/80" />
+          <button
+            onClick={onEdit}
+            className="rounded-lg p-1 text-white/60 hover:bg-white/10 hover:text-white"
+            aria-label="Editar cuenta"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
           <button
             onClick={() => deleteAccount.mutate(account.id)}
             className="rounded-lg p-1 text-white/60 hover:bg-white/10 hover:text-white"

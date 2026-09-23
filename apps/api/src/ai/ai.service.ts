@@ -2,6 +2,7 @@ import { Injectable, ServiceUnavailableException } from "@nestjs/common";
 import { PrismaService } from "../common/prisma/prisma.service";
 import { StatisticsService } from "../statistics/statistics.service";
 import { AccountsService } from "../accounts/accounts.service";
+import { LoansService } from "../loans/loans.service";
 import { AskAssistantDto } from "./dto/ask-assistant.dto";
 
 /**
@@ -17,6 +18,7 @@ export class AiService {
     private readonly prisma: PrismaService,
     private readonly statistics: StatisticsService,
     private readonly accounts: AccountsService,
+    private readonly loans: LoansService,
   ) {}
 
   async ask(userId: string, dto: AskAssistantDto): Promise<{ answer: string }> {
@@ -30,7 +32,7 @@ export class AiService {
     const month = now.getUTCMonth() + 1;
     const year = now.getUTCFullYear();
 
-    const [summary, budgets, goals, accounts] = await Promise.all([
+    const [summary, budgets, goals, accounts, loans] = await Promise.all([
       this.statistics.summary(userId, { period: "this_month" }),
       this.prisma.budget.findMany({
         where: { userId, month, year },
@@ -41,6 +43,7 @@ export class AiService {
         select: { name: true, targetAmount: true, currentAmount: true, targetDate: true },
       }),
       this.accounts.findAll(userId),
+      this.loans.findAll(userId),
     ]);
 
     return {
@@ -68,6 +71,14 @@ export class AiService {
         current: Number(g.currentAmount),
         targetDate: g.targetDate,
       })),
+      loansOwedToUser: loans
+        .filter((l) => l.status === "ACTIVE")
+        .map((l) => ({
+          borrowerName: l.borrowerName,
+          remaining: l.remaining,
+          nextDueDate: l.nextDueDate,
+          isOverdue: l.isOverdue,
+        })),
     };
   }
 

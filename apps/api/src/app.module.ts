@@ -11,6 +11,7 @@ import { CategoriesModule } from "./categories/categories.module";
 import { TransactionsModule } from "./transactions/transactions.module";
 import { BudgetsModule } from "./budgets/budgets.module";
 import { GoalsModule } from "./goals/goals.module";
+import { LoansModule } from "./loans/loans.module";
 import { StatisticsModule } from "./statistics/statistics.module";
 import { AuditModule } from "./audit/audit.module";
 import { AdminModule } from "./admin/admin.module";
@@ -34,6 +35,7 @@ import { AiModule } from "./ai/ai.module";
     TransactionsModule,
     BudgetsModule,
     GoalsModule,
+    LoansModule,
     StatisticsModule,
     AuditModule,
     AdminModule,

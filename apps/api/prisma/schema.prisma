@@ -91,6 +91,21 @@ enum AccountType {
   @@map("account_type")
 }
 
+enum LoanPaymentType {
+  SINGLE
+  INSTALLMENTS
+
+  @@map("loan_payment_type")
+}
+
+enum LoanStatus {
+  ACTIVE
+  PAID
+  CANCELLED
+
+  @@map("loan_status")
+}
+
 model Profile {
   id          String     @id @db.Uuid
   firstName   String     @map("first_name")
@@ -109,6 +124,8 @@ model Profile {
   budgets       Budget[]
   savingsGoals  SavingsGoal[]
   goalMovements GoalMovement[]
+  loans         Loan[]
+  loanPayments  LoanPayment[]
   preferences   UserPreferences?
   notifications Notification[]
   auditLogs     AuditLog[]        @relation("AuditActor")
@@ -231,6 +248,43 @@ model GoalMovement {
   @@index([goalId])
   @@index([userId])
   @@map("goal_movements")
+}
+
+model Loan {
+  id                String          @id @default(uuid()) @db.Uuid
+  userId            String          @map("user_id") @db.Uuid
+  borrowerName      String          @map("borrower_name")
+  totalAmount       Decimal         @map("total_amount") @db.Decimal(14, 2)
+  paymentType       LoanPaymentType @map("payment_type")
+  dueDate           DateTime?       @map("due_date") @db.Date
+  installmentsCount Int?            @map("installments_count") @db.SmallInt
+  firstDueDate      DateTime?       @map("first_due_date") @db.Date
+  notes             String?
+  status            LoanStatus      @default(ACTIVE)
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  user     Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments LoanPayment[]
+
+  @@index([userId, status])
+  @@map("loans")
+}
+
+model LoanPayment {
+  id        String   @id @default(uuid()) @db.Uuid
+  loanId    String   @map("loan_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  amount    Decimal  @db.Decimal(14, 2)
+  paidAt    DateTime @default(now()) @map("paid_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  loan Loan    @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([loanId])
+  @@index([userId])
+  @@map("loan_payments")
 }
 
 model UserPreferences {
