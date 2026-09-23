@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { useCategories } from "@/hooks/use-categories";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useCreateTransaction, TransactionInput } from "@/hooks/use-transactions";
+import { PAYMENT_METHOD_BY_ACCOUNT_TYPE } from "@/lib/accounts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,13 +55,26 @@ export function TransactionForm({ onSuccess }: { onSuccess: () => void }) {
   });
 
   const type = watch("type");
+  const accountId = watch("accountId");
   const { data: categories } = useCategories(type);
-  const { data: accounts } = useAccounts();
+  const { data: allAccounts } = useAccounts();
   const createTransaction = useCreateTransaction();
+
+  // A credit card can't receive "income" (paying it off is its own action
+  // in Cuentas, not a regular transaction) — so it's never offered here.
+  const accounts = allAccounts?.filter((a) => type !== "INCOME" || a.type !== "CREDIT");
+  const selectedAccount = accounts?.find((a) => a.id === accountId);
 
   useEffect(() => {
     setValue("categoryId", "");
   }, [type, setValue]);
+
+  useEffect(() => {
+    // Switching to Ingreso can invalidate a previously-selected credit card.
+    if (accountId && !accounts?.some((a) => a.id === accountId)) {
+      setValue("accountId", "");
+    }
+  }, [type, accountId, accounts, setValue]);
 
   async function onSubmit(values: FormValues) {
     await createTransaction.mutateAsync({
@@ -131,10 +145,15 @@ export function TransactionForm({ onSuccess }: { onSuccess: () => void }) {
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
-                {a.bank ? ` · ${a.bank}` : ""}
+                {a.bank && a.bank !== a.name ? ` · ${a.bank}` : ""}
               </option>
             ))}
           </Select>
+          {type === "INCOME" && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Las tarjetas de crédito no reciben ingresos.
+            </p>
+          )}
         </div>
       )}
 
@@ -148,16 +167,25 @@ export function TransactionForm({ onSuccess }: { onSuccess: () => void }) {
             error={errors.transactionDate?.message}
           />
         </div>
-        <div>
-          <Label htmlFor="paymentMethod">Método de pago</Label>
-          <Select id="paymentMethod" {...register("paymentMethod")}>
-            {PAYMENT_METHODS.map((m) => (
-              <option key={m.value} value={m.value}>
-                {m.label}
-              </option>
-            ))}
-          </Select>
-        </div>
+        {selectedAccount ? (
+          <div>
+            <Label>Método de pago</Label>
+            <div className="flex h-10 items-center rounded-lg border border-border bg-muted px-3 text-sm text-muted-foreground">
+              {PAYMENT_METHOD_BY_ACCOUNT_TYPE[selectedAccount.type]} · {selectedAccount.name}
+            </div>
+          </div>
+        ) : (
+          <div>
+            <Label htmlFor="paymentMethod">Método de pago</Label>
+            <Select id="paymentMethod" {...register("paymentMethod")}>
+              {PAYMENT_METHODS.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
       </div>
 
       <div>

@@ -3,12 +3,25 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
+import { Account, PaymentMethod, Prisma } from "@prisma/client";
 import { PrismaService } from "../common/prisma/prisma.service";
 import { paginate } from "../common/pagination/pagination.dto";
 import { CreateTransactionDto } from "./dto/create-transaction.dto";
 import { UpdateTransactionDto } from "./dto/update-transaction.dto";
 import { QueryTransactionsDto } from "./dto/query-transactions.dto";
+
+// A transaction's payment method is derived from the account it's tied to
+// (spec: picking a card locks the method to "that card", it's never a free
+// choice alongside an account) — never trusted from the client when an
+// account is present, so a manipulated request can't claim a debit card
+// purchase was "cash".
+const PAYMENT_METHOD_BY_ACCOUNT_TYPE: Record<Account["type"], PaymentMethod> = {
+  CASH: "CASH",
+  DEBIT: "DEBIT",
+  CREDIT: "CREDIT",
+  SAVINGS: "DEBIT",
+  OTHER: "OTHER",
+};
 
 @Injectable()
 export class TransactionsService {
@@ -64,9 +77,10 @@ export class TransactionsService {
 
   async create(userId: string, dto: CreateTransactionDto) {
     await this.assertCategoryUsable(userId, dto.categoryId);
-    if (dto.accountId) {
-      await this.assertAccountOwned(userId, dto.accountId);
-    }
+    const account = dto.accountId
+      ? await this.resolveAccount(userId, dto.accountId, dto.type)
+      : null;
+
     return this.prisma.transaction.create({
       data: {
         userId,
@@ -75,7 +89,9 @@ export class TransactionsService {
         type: dto.type,
         amount: dto.amount,
         description: dto.description,
-        paymentMethod: dto.paymentMethod,
+        paymentMethod: account
+          ? PAYMENT_METHOD_BY_ACCOUNT_TYPE[account.type]
+          : dto.paymentMethod,
         transactionDate: new Date(dto.transactionDate),
         notes: dto.notes,
       },
@@ -84,17 +100,30 @@ export class TransactionsService {
   }
 
   async update(userId: string, id: string, dto: UpdateTransactionDto) {
-    await this.findOne(userId, id);
+    const existing = await this.findOne(userId, id);
     if (dto.categoryId) {
       await this.assertCategoryUsable(userId, dto.categoryId);
     }
-    if (dto.accountId) {
-      await this.assertAccountOwned(userId, dto.accountId);
-    }
+
+    // Re-derive from the EFFECTIVE account/type (whichever this call keeps
+    // or changes), not just whatever field this particular PATCH happened
+    // to touch — otherwise flipping type to INCOME on a transaction that
+    // already has a credit card account (without resending accountId)
+    // would skip the credit-card-can't-receive-income check entirely.
+    const effectiveType = dto.type ?? existing.type;
+    const effectiveAccountId =
+      dto.accountId !== undefined ? dto.accountId : existing.accountId;
+    const account = effectiveAccountId
+      ? await this.resolveAccount(userId, effectiveAccountId, effectiveType)
+      : null;
+
     return this.prisma.transaction.update({
       where: { id },
       data: {
         ...dto,
+        paymentMethod: account
+          ? PAYMENT_METHOD_BY_ACCOUNT_TYPE[account.type]
+          : dto.paymentMethod,
         transactionDate: dto.transactionDate
           ? new Date(dto.transactionDate)
           : undefined,
@@ -123,12 +152,23 @@ export class TransactionsService {
     }
   }
 
-  private async assertAccountOwned(userId: string, accountId: string): Promise<void> {
+  /** Also enforces: a credit card can't be the account for an INCOME transaction. */
+  private async resolveAccount(
+    userId: string,
+    accountId: string,
+    transactionType: string,
+  ): Promise<Account> {
     const account = await this.prisma.account.findUnique({
       where: { id: accountId },
     });
     if (!account || account.userId !== userId) {
       throw new BadRequestException("Cuenta inválida.");
     }
+    if (account.type === "CREDIT" && transactionType === "INCOME") {
+      throw new BadRequestException(
+        "Una tarjeta de crédito no puede recibir ingresos. Usa 'Pagar tarjeta' para registrar un pago.",
+      );
+    }
+    return account;
   }
 }

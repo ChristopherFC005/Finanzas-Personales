@@ -120,12 +120,13 @@ model Profile {
 
   categories    Category[]
   transactions  Transaction[]
-  accounts      Account[]
-  budgets       Budget[]
-  savingsGoals  SavingsGoal[]
-  goalMovements GoalMovement[]
-  loans         Loan[]
-  loanPayments  LoanPayment[]
+  accounts        Account[]
+  accountPayments AccountPayment[]
+  budgets         Budget[]
+  savingsGoals    SavingsGoal[]
+  goalMovements   GoalMovement[]
+  loans           Loan[]
+  loanPayments    LoanPayment[]
   preferences   UserPreferences?
   notifications Notification[]
   auditLogs     AuditLog[]        @relation("AuditActor")
@@ -163,11 +164,29 @@ model Account {
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
 
-  user         Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         Profile          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  payments     AccountPayment[]
 
   @@index([userId])
   @@map("accounts")
+}
+
+model AccountPayment {
+  id            String   @id @default(uuid()) @db.Uuid
+  accountId     String   @map("account_id") @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  amount        Decimal  @db.Decimal(14, 2)
+  isInstallment Boolean  @default(false) @map("is_installment")
+  paidAt        DateTime @default(now()) @map("paid_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user    Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([userId])
+  @@map("account_payments")
 }
 
 model Transaction {

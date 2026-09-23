@@ -18,6 +18,7 @@ import { AuthenticatedUser } from "../auth/auth.types";
 import { AccountsService } from "./accounts.service";
 import { CreateAccountDto } from "./dto/create-account.dto";
 import { UpdateAccountDto } from "./dto/update-account.dto";
+import { PayCreditCardDto } from "./dto/pay-credit-card.dto";
 
 @ApiTags("accounts")
 @ApiBearerAuth()
@@ -54,6 +55,15 @@ export class AccountsController {
     @Body() dto: UpdateAccountDto,
   ) {
     return this.accountsService.update(user.id, id, dto);
+  }
+
+  @Post(":id/payments")
+  payCreditCard(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() dto: PayCreditCardDto,
+  ) {
+    return this.accountsService.payCreditCard(user.id, id, dto);
   }
 
   @Delete(":id")

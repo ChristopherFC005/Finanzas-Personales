@@ -66,3 +66,19 @@ export function useDeleteAccount() {
     onSuccess: invalidate,
   });
 }
+
+export function usePayCreditCard() {
+  const invalidate = useInvalidateAccounts();
+  return useMutation({
+    mutationFn: ({
+      id,
+      amount,
+      isInstallment,
+    }: {
+      id: string;
+      amount: string;
+      isInstallment: boolean;
+    }) => apiClient.post<Account>(`/accounts/${id}/payments`, { amount, isInstallment }),
+    onSuccess: invalidate,
+  });
+}

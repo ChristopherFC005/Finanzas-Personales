@@ -8,7 +8,8 @@ import {
   useCreateAccount,
   useUpdateAccount,
 } from "@/hooks/use-accounts";
-import { PERU_BANKS, ACCOUNT_TYPE_LABELS } from "@/lib/accounts";
+import { PERU_BANKS, ACCOUNT_TYPE_LABELS, METALLIC_PRESETS, metallicGradient } from "@/lib/accounts";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,7 @@ interface FormValues {
   initialBalance?: string;
   availableNow?: string;
   creditLimit?: string;
+  color?: string;
 }
 
 export function AccountForm({
@@ -41,6 +43,7 @@ export function AccountForm({
     register,
     handleSubmit,
     watch,
+    setValue,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
@@ -53,11 +56,13 @@ export function AccountForm({
           availableNow:
             account.type === "CREDIT" ? String(account.availableCredit ?? 0) : undefined,
           creditLimit: account.creditLimit ?? undefined,
+          color: account.color ?? undefined,
         }
       : { type: "DEBIT", initialBalance: "0" },
   });
 
   const type = watch("type");
+  const color = watch("color");
 
   async function onSubmit(values: FormValues) {
     let initialBalance = values.initialBalance || "0";
@@ -83,6 +88,7 @@ export function AccountForm({
       bank: values.bank || undefined,
       initialBalance,
       creditLimit: values.type === "CREDIT" ? values.creditLimit : undefined,
+      color: values.color || undefined,
     };
 
     if (isEdit && account) {
@@ -172,6 +178,36 @@ export function AccountForm({
           />
         </div>
       )}
+
+      <div>
+        <Label>Color de la tarjeta</Label>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setValue("color", undefined)}
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-full border-2 text-[10px] text-muted-foreground gradient-brand",
+              !color ? "border-foreground" : "border-transparent",
+            )}
+            title="Predeterminado"
+          >
+            {!color && "✓"}
+          </button>
+          {METALLIC_PRESETS.map((preset) => (
+            <button
+              key={preset.hex}
+              type="button"
+              title={preset.name}
+              onClick={() => setValue("color", preset.hex)}
+              className={cn(
+                "h-9 w-9 rounded-full border-2 transition-transform hover:scale-105",
+                color === preset.hex ? "border-foreground" : "border-transparent",
+              )}
+              style={{ background: metallicGradient(preset.hex) }}
+            />
+          ))}
+        </div>
+      </div>
 
       {mutation.isError && (
         <p className="text-sm text-danger">No se pudo guardar la cuenta. Intenta nuevamente.</p>

@@ -2,13 +2,13 @@
 // hex color the user picks (spec §16): --primary, --primary-hover,
 // --primary-active, --primary-muted, --primary-foreground, --focus-ring.
 
-interface Hsl {
+export interface Hsl {
   h: number;
   s: number;
   l: number;
 }
 
-function hexToHsl(hex: string): Hsl {
+export function hexToHsl(hex: string): Hsl {
   const normalized = hex.replace("#", "");
   const r = parseInt(normalized.slice(0, 2), 16) / 255;
   const g = parseInt(normalized.slice(2, 4), 16) / 255;
@@ -39,7 +39,7 @@ function hexToHsl(hex: string): Hsl {
   return { h: h * 360, s: s * 100, l: l * 100 };
 }
 
-function hslToHex({ h, s, l }: Hsl): string {
+export function hslToHex({ h, s, l }: Hsl): string {
   const sNorm = s / 100;
   const lNorm = l / 100;
   const c = (1 - Math.abs(2 * lNorm - 1)) * sNorm;
