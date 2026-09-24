@@ -17,6 +17,7 @@ export class LoansService {
     const loans = await this.prisma.loan.findMany({
       where: { userId },
       orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      include: { account: { select: { name: true, bank: true, type: true } } },
     });
     if (loans.length === 0) return [];
 
@@ -48,17 +49,20 @@ export class LoansService {
 
   async create(userId: string, dto: CreateLoanDto) {
     this.assertScheduleValid(dto);
+    await this.getOwnedAccountOrThrow(userId, dto.accountId);
     const loan = await this.prisma.loan.create({
       data: {
         userId,
         borrowerName: dto.borrowerName,
         totalAmount: dto.totalAmount,
         paymentType: dto.paymentType,
+        accountId: dto.accountId,
         dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
         installmentsCount: dto.installmentsCount,
         firstDueDate: dto.firstDueDate ? new Date(dto.firstDueDate) : undefined,
         notes: dto.notes,
       },
+      include: { account: { select: { name: true, bank: true, type: true } } },
     });
     return this.withComputed(loan, []);
   }
@@ -67,6 +71,9 @@ export class LoansService {
     await this.getOwnedOrThrow(userId, id);
     if (dto.paymentType) {
       this.assertScheduleValid(dto as CreateLoanDto);
+    }
+    if (dto.accountId) {
+      await this.getOwnedAccountOrThrow(userId, dto.accountId);
     }
     await this.prisma.loan.update({
       where: { id },
@@ -132,11 +139,21 @@ export class LoansService {
   }
 
   private async getOwnedOrThrow(userId: string, id: string): Promise<Loan> {
-    const loan = await this.prisma.loan.findUnique({ where: { id } });
+    const loan = await this.prisma.loan.findUnique({
+      where: { id },
+      include: { account: { select: { name: true, bank: true, type: true } } },
+    });
     if (!loan || loan.userId !== userId) {
       throw new NotFoundException("Préstamo no encontrado.");
     }
     return loan;
+  }
+
+  private async getOwnedAccountOrThrow(userId: string, accountId: string): Promise<void> {
+    const account = await this.prisma.account.findUnique({ where: { id: accountId } });
+    if (!account || account.userId !== userId) {
+      throw new NotFoundException("Cuenta no encontrada.");
+    }
   }
 
   private withComputed(

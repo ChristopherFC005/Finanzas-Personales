@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   ShieldCheck,
-  PiggyBank,
   LineChart,
   Target,
   Sparkles,
@@ -21,10 +20,10 @@ const FEATURES = [
       "Registra ingresos y gastos en segundos y visualiza tu situación financiera al instante, con gráficos que se adaptan a ti.",
   },
   {
-    icon: PiggyBank,
-    title: "Presupuestos inteligentes",
+    icon: Wallet,
+    title: "Cuentas y tarjetas",
     description:
-      "Define límites por categoría y recibe alertas antes de excederlos. Sin sorpresas a fin de mes.",
+      "Controla efectivo, débito, ahorros y tarjetas de crédito con colores personalizados en un solo lugar.",
   },
   {
     icon: Target,

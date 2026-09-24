@@ -37,6 +37,7 @@ export function LoanCard({ loan, currency }: { loan: Loan; currency: string }) {
             <p className="font-medium text-foreground">{loan.borrowerName}</p>
             <p className="text-xs text-muted-foreground">
               {loan.paymentType === "SINGLE" ? "Pago único" : `${loan.installmentsCount} cuotas`}
+              {loan.account && ` · desde ${loan.account.name}`}
             </p>
           </div>
         </div>

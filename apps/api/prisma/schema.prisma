@@ -122,7 +122,6 @@ model Profile {
   transactions  Transaction[]
   accounts        Account[]
   accountPayments AccountPayment[]
-  budgets         Budget[]
   savingsGoals    SavingsGoal[]
   goalMovements   GoalMovement[]
   loans           Loan[]
@@ -145,7 +144,6 @@ model Category {
 
   user         Profile?      @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
-  budgets      Budget[]
 
   @@index([userId])
   @@map("categories")
@@ -167,6 +165,7 @@ model Account {
   user         Profile          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
   payments     AccountPayment[]
+  loans        Loan[]
 
   @@index([userId])
   @@map("accounts")
@@ -215,25 +214,6 @@ model Transaction {
   @@map("transactions")
 }
 
-model Budget {
-  id               String   @id @default(uuid()) @db.Uuid
-  userId           String   @map("user_id") @db.Uuid
-  categoryId       String   @map("category_id") @db.Uuid
-  amount           Decimal  @db.Decimal(14, 2)
-  month            Int      @db.SmallInt
-  year             Int      @db.SmallInt
-  alertPercentage  Int      @default(80) @map("alert_percentage") @db.SmallInt
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-
-  user     Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, categoryId, month, year])
-  @@index([userId, year, month])
-  @@map("budgets")
-}
-
 model SavingsGoal {
   id            String     @id @default(uuid()) @db.Uuid
   userId        String     @map("user_id") @db.Uuid
@@ -278,12 +258,14 @@ model Loan {
   dueDate           DateTime?       @map("due_date") @db.Date
   installmentsCount Int?            @map("installments_count") @db.SmallInt
   firstDueDate      DateTime?       @map("first_due_date") @db.Date
+  accountId         String?         @map("account_id") @db.Uuid
   notes             String?
   status            LoanStatus      @default(ACTIVE)
   createdAt         DateTime        @default(now()) @map("created_at")
   updatedAt         DateTime        @updatedAt @map("updated_at")
 
   user     Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account  Account?      @relation(fields: [accountId], references: [id], onDelete: SetNull)
   payments LoanPayment[]
 
   @@index([userId, status])

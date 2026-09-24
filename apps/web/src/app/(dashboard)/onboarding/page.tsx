@@ -12,7 +12,6 @@ import { ThemeModeSelector } from "@/components/theme/theme-mode-selector";
 const OBJECTIVES = [
   "Controlar gastos",
   "Ahorrar",
-  "Crear presupuesto",
   "Organizar finanzas",
   "Alcanzar una meta",
 ];

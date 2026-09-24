@@ -8,6 +8,7 @@ describe("AccountsService — credit line renewal", () => {
     account: { findUnique: jest.Mock };
     accountPayment: { create: jest.Mock; groupBy: jest.Mock };
     transaction: { groupBy: jest.Mock };
+    loan: { groupBy: jest.Mock };
   };
 
   const creditAccount = {
@@ -23,6 +24,7 @@ describe("AccountsService — credit line renewal", () => {
       account: { findUnique: jest.fn() },
       accountPayment: { create: jest.fn(), groupBy: jest.fn() },
       transaction: { groupBy: jest.fn() },
+      loan: { groupBy: jest.fn() },
     };
     service = new AccountsService(prisma as unknown as PrismaService);
   });
@@ -84,5 +86,44 @@ describe("AccountsService — credit line renewal", () => {
 
     expect(result.currentBalance).toBe(-300); // -500 + 100 + 100
     expect(result.availableCredit).toBe(2600); // 3000 + (-300) - 100 reserved
+  });
+});
+
+describe("AccountsService — loans funded from an account", () => {
+  let service: AccountsService;
+
+  const debitAccount = {
+    id: "acc-1",
+    userId: "u1",
+    type: "DEBIT",
+    initialBalance: "1000",
+    creditLimit: null,
+  };
+
+  beforeEach(() => {
+    service = new AccountsService({} as unknown as PrismaService);
+  });
+
+  it("subtracts an active loan's total amount from the funding account's balance", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const withComputedBalance = (service as any).withComputedBalance.bind(service);
+
+    const result = withComputedBalance(
+      debitAccount,
+      [],
+      [],
+      [{ accountId: "acc-1", _sum: { totalAmount: 300 } }],
+    );
+
+    expect(result.currentBalance).toBe(700); // 1000 - 300 lent out
+  });
+
+  it("does not deduct a loan that was never linked to this account", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const withComputedBalance = (service as any).withComputedBalance.bind(service);
+
+    const result = withComputedBalance(debitAccount, [], [], []);
+
+    expect(result.currentBalance).toBe(1000);
   });
 });

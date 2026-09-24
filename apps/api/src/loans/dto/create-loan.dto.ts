@@ -6,6 +6,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   Max,
   MaxLength,
@@ -34,6 +35,10 @@ export class CreateLoanDto {
 
   @IsEnum(LoanPaymentType)
   paymentType!: LoanPaymentType;
+
+  // De qué cuenta/tarjeta sale el dinero prestado — se descuenta de su saldo.
+  @IsUUID()
+  accountId!: string;
 
   // Requerido solo cuando paymentType = SINGLE (validado en el service,
   // porque depende del valor de otro campo).

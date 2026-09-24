@@ -18,6 +18,7 @@ export function GoalCard({
   onDelete: () => void;
 }) {
   const [amount, setAmount] = useState("");
+  const [frequency, setFrequency] = useState<"MONTHLY" | "BIWEEKLY">("MONTHLY");
   const deposit = useDepositGoal();
   const withdraw = useWithdrawGoal();
 
@@ -25,6 +26,26 @@ export function GoalCard({
     100,
     Math.round((Number(goal.currentAmount) / Number(goal.targetAmount)) * 100),
   );
+
+  // Suggests how much to add per period to land on the target date — purely
+  // a read-only projection from what's already stored (targetAmount,
+  // currentAmount, targetDate), nothing persisted server-side.
+  const suggestedContribution = (() => {
+    if (goal.status !== "ACTIVE" || !goal.targetDate) return null;
+    const remaining = Number(goal.targetAmount) - Number(goal.currentAmount);
+    if (remaining <= 0) return null;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysLeft = Math.ceil(
+      (new Date(goal.targetDate).getTime() - today.getTime()) / 86_400_000,
+    );
+    if (daysLeft <= 0) return null;
+
+    const periodDays = frequency === "MONTHLY" ? 30 : 15;
+    const periods = Math.max(1, Math.ceil(daysLeft / periodDays));
+    return remaining / periods;
+  })();
 
   function handleDeposit() {
     if (!amount) return;
@@ -72,6 +93,44 @@ export function GoalCard({
         </div>
         <p className="mt-1 text-xs text-muted-foreground">{percentage}% completado</p>
       </div>
+
+      {suggestedContribution !== null && (
+        <div className="mt-3 rounded-lg bg-muted p-2.5">
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => setFrequency("MONTHLY")}
+              className={cn(
+                "rounded-full px-2.5 py-1 text-[11px] font-medium",
+                frequency === "MONTHLY"
+                  ? "bg-primary text-white"
+                  : "bg-background text-muted-foreground",
+              )}
+            >
+              Mensual
+            </button>
+            <button
+              type="button"
+              onClick={() => setFrequency("BIWEEKLY")}
+              className={cn(
+                "rounded-full px-2.5 py-1 text-[11px] font-medium",
+                frequency === "BIWEEKLY"
+                  ? "bg-primary text-white"
+                  : "bg-background text-muted-foreground",
+              )}
+            >
+              Quincenal
+            </button>
+          </div>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Aporta{" "}
+            <span className="font-semibold text-foreground">
+              {formatMoney(suggestedContribution, currency)}
+            </span>{" "}
+            {frequency === "MONTHLY" ? "al mes" : "cada quincena"} para llegar a tiempo.
+          </p>
+        </div>
+      )}
 
       {goal.status === "ACTIVE" && (
         <div className="mt-4 flex gap-2">

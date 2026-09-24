@@ -5,10 +5,12 @@ import { useForm } from "react-hook-form";
 import { HandCoins, Plus } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { LoanInput, LoanPaymentType, useCreateLoan, useLoans } from "@/hooks/use-loans";
+import { useAccounts } from "@/hooks/use-accounts";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoanCard } from "@/components/finance/loan-card";
@@ -19,6 +21,7 @@ export default function LoansPage() {
   const { data: user } = useCurrentUser();
   const currency = user?.preferences?.currency ?? "PEN";
   const { data: loans, isLoading } = useLoans();
+  const { data: accounts } = useAccounts();
   const createLoan = useCreateLoan();
 
   const {
@@ -45,6 +48,7 @@ export default function LoansPage() {
       borrowerName: values.borrowerName,
       totalAmount: values.totalAmount,
       paymentType: values.paymentType,
+      accountId: values.accountId,
       notes: values.notes || undefined,
       ...(values.paymentType === "SINGLE"
         ? { dueDate: values.dueDate }
@@ -133,6 +137,22 @@ export default function LoansPage() {
               placeholder="0.00"
               {...register("totalAmount", { required: true, pattern: /^\d{1,12}(\.\d{1,2})?$/ })}
             />
+          </div>
+
+          <div>
+            <Label htmlFor="accountId">¿Desde qué cuenta o tarjeta sale el dinero?</Label>
+            <Select id="accountId" {...register("accountId", { required: true })}>
+              <option value="">Selecciona…</option>
+              {accounts?.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                  {a.bank && a.bank !== a.name ? ` · ${a.bank}` : ""}
+                </option>
+              ))}
+            </Select>
+            {errors.accountId && (
+              <p className="mt-1 text-xs text-danger">Selecciona una cuenta.</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-2">

@@ -15,7 +15,7 @@ interface Message {
 const SUGGESTIONS = [
   "¿Cuánto gasté este mes?",
   "¿En qué categoría gasté más?",
-  "¿Cómo voy con mi presupuesto?",
+  "¿Cómo van mis préstamos?",
   "Compara este mes con el anterior.",
 ];
 

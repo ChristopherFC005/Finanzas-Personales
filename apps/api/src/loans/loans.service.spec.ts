@@ -17,6 +17,7 @@ describe("LoansService", () => {
       create: jest.Mock;
       aggregate: jest.Mock;
     };
+    account: { findUnique: jest.Mock };
     $transaction: jest.Mock;
   };
 
@@ -30,6 +31,7 @@ describe("LoansService", () => {
         update: jest.fn(),
       },
       loanPayment: { groupBy: jest.fn(), create: jest.fn(), aggregate: jest.fn() },
+      account: { findUnique: jest.fn() },
       $transaction: jest.fn(),
     };
     service = new LoansService(prisma as unknown as PrismaService);
@@ -64,6 +66,37 @@ describe("LoansService", () => {
           paymentType: "INSTALLMENTS",
         } as never),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe("funding account ownership", () => {
+    it("rejects creating a loan against an account owned by another user", async () => {
+      prisma.account.findUnique.mockResolvedValue({ id: "acc-1", userId: "user-b" });
+
+      await expect(
+        service.create("user-a", {
+          borrowerName: "Juan",
+          totalAmount: "100",
+          paymentType: "SINGLE",
+          dueDate: "2026-01-01",
+          accountId: "acc-1",
+        } as never),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.loan.create).not.toHaveBeenCalled();
+    });
+
+    it("rejects creating a loan against a non-existent account", async () => {
+      prisma.account.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.create("user-a", {
+          borrowerName: "Juan",
+          totalAmount: "100",
+          paymentType: "SINGLE",
+          dueDate: "2026-01-01",
+          accountId: "acc-missing",
+        } as never),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

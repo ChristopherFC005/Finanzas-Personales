@@ -21,6 +21,11 @@ interface PaymentTotal {
   _sum: { amount: unknown };
 }
 
+interface LoanTotal {
+  accountId: string | null;
+  _sum: { totalAmount: unknown };
+}
+
 @Injectable()
 export class AccountsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -36,7 +41,7 @@ export class AccountsService {
     }
 
     const accountIds = accounts.map((a) => a.id);
-    const [movements, payments] = await Promise.all([
+    const [movements, payments, loans] = await Promise.all([
       this.prisma.transaction.groupBy({
         by: ["accountId", "type"],
         where: { userId, deletedAt: null, accountId: { in: accountIds } },
@@ -47,16 +52,21 @@ export class AccountsService {
         where: { userId, accountId: { in: accountIds } },
         _sum: { amount: true },
       }),
+      this.prisma.loan.groupBy({
+        by: ["accountId"],
+        where: { userId, accountId: { in: accountIds }, status: { not: "CANCELLED" } },
+        _sum: { totalAmount: true },
+      }),
     ]);
 
     return accounts.map((account) =>
-      this.withComputedBalance(account, movements, payments),
+      this.withComputedBalance(account, movements, payments, loans),
     );
   }
 
   async findOne(userId: string, id: string) {
     const account = await this.getOwnedOrThrow(userId, id);
-    const [movements, payments] = await Promise.all([
+    const [movements, payments, loans] = await Promise.all([
       this.prisma.transaction.groupBy({
         by: ["accountId", "type"],
         where: { userId, deletedAt: null, accountId: id },
@@ -67,8 +77,13 @@ export class AccountsService {
         where: { userId, accountId: id },
         _sum: { amount: true },
       }),
+      this.prisma.loan.groupBy({
+        by: ["accountId"],
+        where: { userId, accountId: id, status: { not: "CANCELLED" } },
+        _sum: { totalAmount: true },
+      }),
     ]);
-    return this.withComputedBalance(account, movements, payments);
+    return this.withComputedBalance(account, movements, payments, loans);
   }
 
   async create(userId: string, dto: CreateAccountDto) {
@@ -83,7 +98,7 @@ export class AccountsService {
         color: dto.color,
       },
     });
-    return this.withComputedBalance(account, [], []);
+    return this.withComputedBalance(account, [], [], []);
   }
 
   async update(userId: string, id: string, dto: UpdateAccountDto) {
@@ -136,6 +151,7 @@ export class AccountsService {
     account: Account,
     movements: MovementTotal[],
     payments: PaymentTotal[],
+    loans: LoanTotal[] = [],
   ) {
     const income = Number(
       movements.find((m) => m.accountId === account.id && m.type === "INCOME")?._sum
@@ -151,12 +167,18 @@ export class AccountsService {
     const installmentReserved = payments
       .filter((p) => p.accountId === account.id && p.isInstallment)
       .reduce((sum, p) => sum + Number(p._sum.amount ?? 0), 0);
+    // Money lent to someone else leaves the account it was funded from —
+    // the loan is only "back" if it's later reversed (status CANCELLED),
+    // repayments from the borrower don't return to this account (spec).
+    const lent = loans
+      .filter((l) => l.accountId === account.id)
+      .reduce((sum, l) => sum + Number(l._sum.totalAmount ?? 0), 0);
 
     // Card payments reduce debt (increase the balance toward/above zero)
     // exactly like income would, but never flow through the Transaction
     // ledger — a credit card cannot receive "income" (spec: point 5).
     const currentBalance =
-      Number(account.initialBalance) + income - expense + totalPayments;
+      Number(account.initialBalance) + income - expense + totalPayments - lent;
     const creditLimit = account.creditLimit ? Number(account.creditLimit) : null;
 
     return {

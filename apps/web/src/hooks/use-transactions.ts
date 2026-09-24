@@ -84,7 +84,6 @@ function invalidateAfterTransactionChange(queryClient: ReturnType<typeof useQuer
   queryClient.invalidateQueries({ queryKey: ["transactions"] });
   queryClient.invalidateQueries({ queryKey: ["statistics"] });
   queryClient.invalidateQueries({ queryKey: ["accounts"] });
-  queryClient.invalidateQueries({ queryKey: ["budgets"] });
 }
 
 export function useCreateTransaction() {

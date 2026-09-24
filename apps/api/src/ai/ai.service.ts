@@ -28,16 +28,8 @@ export class AiService {
   }
 
   private async buildContext(userId: string) {
-    const now = new Date();
-    const month = now.getUTCMonth() + 1;
-    const year = now.getUTCFullYear();
-
-    const [summary, budgets, goals, accounts, loans] = await Promise.all([
+    const [summary, goals, accounts, loans] = await Promise.all([
       this.statistics.summary(userId, { period: "this_month" }),
-      this.prisma.budget.findMany({
-        where: { userId, month, year },
-        include: { category: { select: { name: true } } },
-      }),
       this.prisma.savingsGoal.findMany({
         where: { userId, status: "ACTIVE" },
         select: { name: true, targetAmount: true, currentAmount: true, targetDate: true },
@@ -61,10 +53,6 @@ export class AiService {
         balance: a.currentBalance,
       })),
       totalBalance: accounts.reduce((sum, a) => sum + a.currentBalance, 0),
-      budgets: budgets.map((b) => ({
-        category: b.category.name,
-        amount: Number(b.amount),
-      })),
       goals: goals.map((g) => ({
         name: g.name,
         target: Number(g.targetAmount),
