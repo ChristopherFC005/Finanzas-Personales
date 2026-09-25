@@ -1,4 +1,4 @@
--- FinanZen — cuentas / tarjetas del usuario (debito, credito, efectivo, ahorros)
+-- Cyfra — cuentas / tarjetas del usuario (debito, credito, efectivo, ahorros)
 -- Permite un saldo inicial ("con cuanto arrancas") y llevar el dinero de
 -- cada tarjeta por separado (BCP, Interbank, etc.), en vez de un solo
 -- payment_method generico en las transacciones.

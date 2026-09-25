@@ -1,6 +1,6 @@
-# FinanZen
+# Cyfra
 
-FinanZen es una aplicación SaaS de finanzas personales: multiusuario, segura
+Cyfra es una aplicación SaaS de finanzas personales: multiusuario, segura
 y preparada para producción. Cada usuario gestiona sus propios ingresos,
 gastos, presupuestos y metas de ahorro; un panel administrativo independiente
 permite supervisar la plataforma sin acceso indiscriminado a datos

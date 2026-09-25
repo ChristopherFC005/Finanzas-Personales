@@ -1,4 +1,4 @@
--- FinanZen — default global categories (user_id = null)
+-- Cyfra — default global categories (user_id = null)
 -- Safe to re-run: skips names that already exist as global categories.
 
 insert into public.categories (name, icon, type, is_default, user_id)

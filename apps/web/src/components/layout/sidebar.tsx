@@ -40,7 +40,7 @@ export function Sidebar({ className }: { className?: string }) {
         <span className="flex h-8 w-8 items-center justify-center rounded-lg gradient-brand text-white shadow-glow">
           <Zap className="h-4 w-4" fill="currentColor" />
         </span>
-        <span className="font-display text-lg font-bold gradient-text">FinanZen</span>
+        <span className="font-display text-lg font-bold gradient-text">Cyfra</span>
       </div>
       <nav className="flex-1 space-y-1 px-3">
         {NAV_ITEMS.map((item) => {

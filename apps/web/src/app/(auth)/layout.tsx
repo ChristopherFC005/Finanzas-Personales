@@ -13,7 +13,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <span className="flex h-9 w-9 items-center justify-center rounded-lg gradient-brand text-white shadow-glow">
             <Zap className="h-4 w-4" fill="currentColor" />
           </span>
-          <span className="font-display text-2xl font-bold gradient-text">FinanZen</span>
+          <span className="font-display text-2xl font-bold gradient-text">Cyfra</span>
         </Link>
         <div className="glass-surface animate-fade-up rounded-2xl p-8 shadow-2xl">
           {children}

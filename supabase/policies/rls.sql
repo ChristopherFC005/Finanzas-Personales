@@ -1,4 +1,4 @@
--- FinanZen — Row Level Security policies
+-- Cyfra — Row Level Security policies
 -- Principle: a user may only touch rows where user_id = auth.uid().
 -- Apply after 0001_init.sql. Run in the Supabase SQL editor or via CLI.
 --

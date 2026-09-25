@@ -29,8 +29,8 @@ async function bootstrap() {
 
   if (process.env.NODE_ENV !== "production") {
     const config = new DocumentBuilder()
-      .setTitle("FinanZen API")
-      .setDescription("REST API for the FinanZen personal finance platform")
+      .setTitle("Cyfra API")
+      .setDescription("REST API for the Cyfra personal finance platform")
       .setVersion("1.0")
       .addBearerAuth()
       .build();

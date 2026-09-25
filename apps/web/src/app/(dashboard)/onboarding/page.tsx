@@ -37,7 +37,7 @@ export default function OnboardingPage() {
 
   const steps = [
     {
-      title: "Bienvenido a FinanZen",
+      title: "Bienvenido a Cyfra",
       content: (
         <p className="text-muted-foreground">
           Vamos a personalizar tu experiencia en unos simples pasos.
@@ -76,7 +76,7 @@ export default function OnboardingPage() {
             className="mt-6 rounded-lg p-4 text-sm text-white"
             style={{ backgroundColor: primaryColor }}
           >
-            Vista previa de tu color FinanZen
+            Vista previa de tu color Cyfra
           </div>
         </div>
       ),

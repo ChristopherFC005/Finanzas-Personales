@@ -71,7 +71,7 @@ export default function RegisterPage() {
         <h1 className="text-xl font-semibold">Revisa tu correo</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Te enviamos un enlace de verificación. Confirma tu correo para
-          activar tu cuenta y empezar a usar FinanZen.
+          activar tu cuenta y empezar a usar Cyfra.
         </p>
         <Button className="mt-6" onClick={() => router.push("/login")}>
           Ir a iniciar sesión

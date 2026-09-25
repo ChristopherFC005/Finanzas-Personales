@@ -23,7 +23,7 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-const STORAGE_KEY = "finanzen-theme";
+const STORAGE_KEY = "cyfra-theme";
 const DEFAULT_COLOR = "#10B981";
 const DEFAULT_MODE: ThemeMode = "DARK";
 

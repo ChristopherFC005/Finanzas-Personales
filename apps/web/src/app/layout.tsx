@@ -17,7 +17,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "FinanZen — Controla tus finanzas personales",
+  title: "Cyfra — Controla tus finanzas personales",
   description:
     "Organiza tus ingresos, controla tus gastos, ahorra y alcanza tus metas, todo en un solo lugar.",
 };
@@ -28,11 +28,11 @@ export const viewport: Viewport = {
 
 // Runs before React hydrates so the correct theme/color paint immediately —
 // no flash of the wrong theme for returning users. Defaults to dark + emerald,
-// FinanZen's default brand identity, until preferences load from the backend.
+// Cyfra's default brand identity, until preferences load from the backend.
 const NO_FLASH_SCRIPT = `
 (function () {
   try {
-    var cached = localStorage.getItem("finanzen-theme");
+    var cached = localStorage.getItem("cyfra-theme");
     var mode = "DARK";
     var color = "#10B981";
     if (cached) {

@@ -1,4 +1,6 @@
-# Render Blueprint — backend NestJS de FinanZen.
+# Render Blueprint — backend NestJS de Cyfra.
+# El nombre del servicio (`finanzen-api`) queda igual a propósito: cambiarlo
+# generaría una URL nueva en Render y rompería el monitor de UptimeRobot.
 # Las variables con `sync: false` se piden en el dashboard de Render al crear
 # el servicio; nunca se guardan en el repositorio.
 services:

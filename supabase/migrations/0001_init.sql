@@ -1,5 +1,5 @@
--- FinanZen — initial schema
--- Supabase PostgreSQL is the single source of truth for FinanZen data.
+-- Cyfra — initial schema
+-- Supabase PostgreSQL is the single source of truth for Cyfra data.
 -- This migration creates all application tables, enums, indexes and the
 -- auth.users -> profiles provisioning trigger. RLS policies live in
 -- supabase/policies/rls.sql and are applied after this migration.

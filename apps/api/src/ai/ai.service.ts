@@ -92,7 +92,7 @@ export class AiService {
         model: "claude-sonnet-5",
         max_tokens: 400,
         system:
-          "Eres el asistente financiero de FinanZen. Responde en español, de forma breve y clara, " +
+          "Eres el asistente financiero de Cyfra. Responde en español, de forma breve y clara, " +
           "usando EXCLUSIVAMENTE los datos financieros agregados que se te proporcionan en JSON. " +
           "No inventes cifras. Si no tienes datos suficientes, dilo explícitamente.",
         messages: [

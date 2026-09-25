@@ -1,5 +1,5 @@
 {
-  "name": "@finanzen/api",
+  "name": "@cyfra/api",
   "version": "0.1.0",
   "private": true,
   "scripts": {

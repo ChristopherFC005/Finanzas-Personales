@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
       <div className="text-center">
         <h1 className="text-xl font-semibold">Revisa tu correo</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Si el correo existe en FinanZen, te enviamos instrucciones para
+          Si el correo existe en Cyfra, te enviamos instrucciones para
           restablecer tu contraseña.
         </p>
       </div>

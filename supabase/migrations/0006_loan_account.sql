@@ -1,4 +1,4 @@
--- FinanZen — vincula cada prestamo a la cuenta/tarjeta de donde salio el
+-- Cyfra — vincula cada prestamo a la cuenta/tarjeta de donde salio el
 -- dinero prestado (efectivo, ahorros, debito o credito), para que ese monto
 -- se refleje en el saldo de esa cuenta. Nullable porque prestamos ya
 -- existentes no tienen cuenta asociada; el backend exige el campo para

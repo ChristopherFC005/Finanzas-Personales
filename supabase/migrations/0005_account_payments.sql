@@ -1,4 +1,4 @@
--- FinanZen — pagos a tarjetas de credito, separados de las transacciones
+-- Cyfra — pagos a tarjetas de credito, separados de las transacciones
 -- normales (una tarjeta de credito nunca recibe "ingresos" en el sentido
 -- normal; pagarla es su propia accion). Un pago regular libera linea de
 -- credito de inmediato; un pago "a cuotas" reduce la deuda mostrada pero

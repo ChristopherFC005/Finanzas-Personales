@@ -1,4 +1,4 @@
--- FinanZen — prestamos que el usuario hizo a otras personas (no deudas del
+-- Cyfra — prestamos que el usuario hizo a otras personas (no deudas del
 -- usuario): a quien le presto, cuanto le deben, y cuando le deben pagar,
 -- ya sea de una sola vez o en cuotas mensuales.
 

@@ -1,6 +1,6 @@
-# Supabase — configuración de FinanZen
+# Supabase — configuración de Cyfra
 
-Guía paso a paso para provisionar el proyecto Supabase que usará FinanZen
+Guía paso a paso para provisionar el proyecto Supabase que usará Cyfra
 como su única base de datos, autenticación y almacenamiento.
 
 ## 1. Crear el proyecto

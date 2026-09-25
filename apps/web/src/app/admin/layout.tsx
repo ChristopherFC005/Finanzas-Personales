@@ -49,7 +49,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="flex min-h-screen bg-background">
       <aside className="glass-surface hidden w-64 flex-col border-l-0 border-t-0 md:flex">
         <div className="flex h-16 items-center gap-2 px-6">
-          <span className="font-display text-lg font-bold gradient-text">FinanZen</span>
+          <span className="font-display text-lg font-bold gradient-text">Cyfra</span>
           <span className="rounded bg-accent/15 px-1.5 py-0.5 text-xs font-medium text-accent">
             Admin
           </span>

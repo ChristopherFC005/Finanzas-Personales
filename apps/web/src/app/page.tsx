@@ -42,7 +42,7 @@ const FEATURES = [
 
 const STEPS = [
   { n: "01", title: "Crea tu cuenta", desc: "Regístrate gratis en menos de un minuto." },
-  { n: "02", title: "Personaliza", desc: "Elige moneda, tema y color de tu FinanZen." },
+  { n: "02", title: "Personaliza", desc: "Elige moneda, tema y color de tu Cyfra." },
   { n: "03", title: "Toma el control", desc: "Registra movimientos y deja que los números trabajen para ti." },
 ];
 
@@ -56,7 +56,7 @@ export default function LandingPage() {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg gradient-brand text-white shadow-glow">
               <Zap className="h-4 w-4" fill="currentColor" />
             </span>
-            <span className="font-display text-xl font-bold gradient-text">FinanZen</span>
+            <span className="font-display text-xl font-bold gradient-text">Cyfra</span>
           </div>
           <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
             <a href="#inicio" className="transition-colors hover:text-foreground">Inicio</a>
@@ -242,7 +242,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} FinanZen. Todos los derechos reservados.
+        © {new Date().getFullYear()} Cyfra. Todos los derechos reservados.
       </footer>
     </div>
   );

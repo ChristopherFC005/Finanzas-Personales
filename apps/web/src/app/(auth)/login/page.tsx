@@ -54,7 +54,7 @@ function LoginForm() {
     <div>
       <h1 className="text-xl font-semibold">Inicia sesión</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Bienvenido de vuelta a FinanZen.
+        Bienvenido de vuelta a Cyfra.
       </p>
 
       <form className="mt-6 space-y-4" onSubmit={handleSubmit(onSubmit)}>
