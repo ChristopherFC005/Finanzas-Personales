@@ -9,13 +9,15 @@ import {
   useUpdateAccount,
 } from "@/hooks/use-accounts";
 import { PERU_BANKS, ACCOUNT_TYPE_LABELS, METALLIC_PRESETS, metallicGradient } from "@/lib/accounts";
-import { cn } from "@/lib/utils";
+import { cn, formatDateOnly } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 
 const ACCOUNT_TYPES: AccountType[] = ["CASH", "DEBIT", "CREDIT", "SAVINGS", "OTHER"];
+const CARD_DATES_EDIT_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
 
 interface FormValues {
   name: string;
@@ -25,6 +27,8 @@ interface FormValues {
   availableNow?: string;
   creditLimit?: string;
   color?: string;
+  billingDate?: string;
+  paymentDueDate?: string;
 }
 
 export function AccountForm({
@@ -57,12 +61,18 @@ export function AccountForm({
             account.type === "CREDIT" ? String(account.availableCredit ?? 0) : undefined,
           creditLimit: account.creditLimit ?? undefined,
           color: account.color ?? undefined,
+          billingDate: account.billingDate ?? undefined,
+          paymentDueDate: account.paymentDueDate ?? undefined,
         }
       : { type: "DEBIT", initialBalance: "0" },
   });
 
   const type = watch("type");
   const color = watch("color");
+  const canEditCardDates =
+    !isEdit ||
+    !account ||
+    Date.now() - new Date(account.createdAt).getTime() <= CARD_DATES_EDIT_WINDOW_MS;
 
   async function onSubmit(values: FormValues) {
     let initialBalance = values.initialBalance || "0";
@@ -89,6 +99,13 @@ export function AccountForm({
       initialBalance,
       creditLimit: values.type === "CREDIT" ? values.creditLimit : undefined,
       color: values.color || undefined,
+      // Once the 3-day window closes the backend rejects ANY request that
+      // even mentions these fields, so they're only included while still
+      // editable — resending an unchanged value would break unrelated
+      // edits (e.g. just renaming the card) after that window.
+      ...(values.type === "CREDIT" && canEditCardDates
+        ? { billingDate: values.billingDate || undefined, paymentDueDate: values.paymentDueDate || undefined }
+        : {}),
     };
 
     if (isEdit && account) {
@@ -161,6 +178,42 @@ export function AccountForm({
               {...register("availableNow", { pattern: /^\d{1,12}(\.\d{1,2})?$/ })}
             />
           </div>
+
+          {canEditCardDates ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="billingDate">Fecha de facturación</Label>
+                <DatePicker
+                  id="billingDate"
+                  value={watch("billingDate")}
+                  onChange={(v) => setValue("billingDate", v)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="paymentDueDate">Fecha de pago</Label>
+                <DatePicker
+                  id="paymentDueDate"
+                  value={watch("paymentDueDate")}
+                  onChange={(v) => setValue("paymentDueDate", v)}
+                />
+              </div>
+              {isEdit && (
+                <p className="col-span-2 text-xs text-muted-foreground">
+                  Puedes agregar o cambiar estas fechas hasta 3 días después de crear la tarjeta.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-lg bg-muted p-3 text-xs text-muted-foreground">
+              <p>
+                Corte: {account?.billingDate ? formatDateOnly(account.billingDate) : "no definida"} · Pago:{" "}
+                {account?.paymentDueDate ? formatDateOnly(account.paymentDueDate) : "no definida"}
+              </p>
+              <p className="mt-1">
+                Ya pasaron los 3 días para editar estas fechas.
+              </p>
+            </div>
+          )}
         </>
       ) : (
         <div>

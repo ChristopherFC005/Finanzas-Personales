@@ -105,7 +105,7 @@ export class LoansService {
     // time budget and getting it killed mid-flight.
     await this.prisma.$transaction(async (tx) => {
       await tx.loanPayment.create({
-        data: { loanId: id, userId, amount: dto.amount },
+        data: { loanId: id, userId, amount: dto.amount, accountId: loan.accountId },
       });
 
       const sum = await tx.loanPayment.aggregate({

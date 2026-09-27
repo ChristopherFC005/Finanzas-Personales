@@ -5,17 +5,19 @@ import { CreditCard, Pencil, Trash2 } from "lucide-react";
 import { Account, useDeleteAccount, usePayCreditCard } from "@/hooks/use-accounts";
 import { ACCOUNT_TYPE_ICONS, ACCOUNT_TYPE_LABELS, metallicGradient } from "@/lib/accounts";
 import { hexToHsl } from "@/lib/color";
-import { cn, formatMoney } from "@/lib/utils";
+import { cn, formatDateOnly, formatMoney } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 
 export function AccountCard({
   account,
   currency,
   onEdit,
+  onViewMovements,
 }: {
   account: Account;
   currency: string;
   onEdit: () => void;
+  onViewMovements: () => void;
 }) {
   const [payOpen, setPayOpen] = useState(false);
   const [amount, setAmount] = useState("");
@@ -54,8 +56,12 @@ export function AccountCard({
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onClick={onViewMovements}
+      onKeyDown={(e) => e.key === "Enter" && onViewMovements()}
       className={cn(
-        "relative flex min-h-44 flex-col justify-between overflow-hidden rounded-2xl p-5 shadow-glow",
+        "relative flex min-h-44 cursor-pointer flex-col justify-between overflow-hidden rounded-2xl p-5 shadow-glow transition-transform hover:scale-[1.01]",
         textTone,
         !account.color && "gradient-brand text-white",
       )}
@@ -81,7 +87,10 @@ export function AccountCard({
         <div className="flex items-center gap-2">
           <Icon className={cn("h-6 w-6", mutedTextTone)} />
           <button
-            onClick={onEdit}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
             className={cn(
               "rounded-lg p-1 hover:bg-black/10",
               useDarkText ? "text-slate-900/60 hover:text-slate-900" : "text-white/60 hover:text-white",
@@ -91,7 +100,10 @@ export function AccountCard({
             <Pencil className="h-4 w-4" />
           </button>
           <button
-            onClick={() => deleteAccount.mutate(account.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteAccount.mutate(account.id);
+            }}
             className={cn(
               "rounded-lg p-1 hover:bg-black/10",
               useDarkText ? "text-slate-900/60 hover:text-slate-900" : "text-white/60 hover:text-white",
@@ -126,9 +138,20 @@ export function AccountCard({
           </div>
         )}
 
+        {isCredit && (account.billingDate || account.paymentDueDate) && (
+          <p className={cn("mt-1.5 text-[11px]", mutedTextTone)}>
+            {account.billingDate && `Corte: ${formatDateOnly(account.billingDate)}`}
+            {account.billingDate && account.paymentDueDate && " · "}
+            {account.paymentDueDate && `Pago: ${formatDateOnly(account.paymentDueDate)}`}
+          </p>
+        )}
+
         {isCredit && !payOpen && (
           <button
-            onClick={() => setPayOpen(true)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setPayOpen(true);
+            }}
             className={cn(
               "mt-3 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium",
               useDarkText ? "bg-black/10 hover:bg-black/15" : "bg-white/15 hover:bg-white/25",
@@ -140,7 +163,10 @@ export function AccountCard({
         )}
 
         {isCredit && payOpen && (
-          <div className="mt-3 space-y-2 rounded-lg bg-black/10 p-2.5">
+          <div
+            className="mt-3 space-y-2 rounded-lg bg-black/10 p-2.5"
+            onClick={(e) => e.stopPropagation()}
+          >
             <Input
               inputMode="decimal"
               placeholder="Monto a pagar"

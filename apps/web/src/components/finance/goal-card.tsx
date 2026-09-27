@@ -6,7 +6,7 @@ import { Goal, useDepositGoal, useWithdrawGoal } from "@/hooks/use-goals";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { cn, formatDate, formatMoney } from "@/lib/utils";
+import { cn, formatDateOnly, formatMoney } from "@/lib/utils";
 
 export function GoalCard({
   goal,
@@ -35,11 +35,13 @@ export function GoalCard({
     const remaining = Number(goal.targetAmount) - Number(goal.currentAmount);
     if (remaining <= 0) return null;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const daysLeft = Math.ceil(
-      (new Date(goal.targetDate).getTime() - today.getTime()) / 86_400_000,
-    );
+    // Both sides compared as UTC midnight of a calendar day — targetDate
+    // already arrives that way from the API (`@db.Date`), and today's local
+    // calendar date is re-expressed as UTC midnight so the day-diff isn't
+    // skewed by the viewer's timezone offset (see formatDateOnly).
+    const now = new Date();
+    const todayUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+    const daysLeft = Math.ceil((new Date(goal.targetDate).getTime() - todayUTC) / 86_400_000);
     if (daysLeft <= 0) return null;
 
     const periodDays = frequency === "MONTHLY" ? 30 : 15;
@@ -64,7 +66,7 @@ export function GoalCard({
           <p className="font-medium text-foreground">{goal.name}</p>
           {goal.targetDate && (
             <p className="text-xs text-muted-foreground">
-              Meta: {formatDate(goal.targetDate)}
+              Meta: {formatDateOnly(goal.targetDate)}
             </p>
           )}
         </div>

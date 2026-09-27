@@ -6,7 +6,7 @@ import { Loan, useDeleteLoan, useRegisterLoanPayment } from "@/hooks/use-loans";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { cn, formatDate, formatMoney } from "@/lib/utils";
+import { cn, formatDateOnly, formatMoney } from "@/lib/utils";
 
 export function LoanCard({ loan, currency }: { loan: Loan; currency: string }) {
   const [amount, setAmount] = useState("");
@@ -87,7 +87,7 @@ export function LoanCard({ loan, currency }: { loan: Loan; currency: string }) {
           >
             {loan.isOverdue && <AlertTriangle className="h-3.5 w-3.5" />}
             {loan.isOverdue ? "Venció el " : "Vence el "}
-            {formatDate(loan.nextDueDate)}
+            {formatDateOnly(loan.nextDueDate)}
           </span>
         ) : (
           <span />

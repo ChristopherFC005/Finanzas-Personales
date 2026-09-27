@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { GoalCard } from "@/components/finance/goal-card";
+import { todayLocalISO } from "@/lib/utils";
 
 export default function GoalsPage() {
   const [open, setOpen] = useState(false);
@@ -21,7 +23,7 @@ export default function GoalsPage() {
   const createGoal = useCreateGoal();
   const deleteGoal = useDeleteGoal();
 
-  const { register, handleSubmit, reset, formState: { isSubmitting } } =
+  const { register, handleSubmit, watch, setValue, reset, formState: { isSubmitting } } =
     useForm<GoalInput>();
 
   async function onSubmit(values: GoalInput) {
@@ -86,7 +88,12 @@ export default function GoalsPage() {
           </div>
           <div>
             <Label htmlFor="targetDate">Fecha objetivo</Label>
-            <Input id="targetDate" type="date" {...register("targetDate")} />
+            <DatePicker
+              id="targetDate"
+              value={watch("targetDate")}
+              onChange={(v) => setValue("targetDate", v)}
+              min={todayLocalISO()}
+            />
           </div>
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             Crear meta

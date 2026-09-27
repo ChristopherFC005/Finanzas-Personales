@@ -12,8 +12,11 @@ export interface Account {
   bank: string | null;
   initialBalance: string;
   creditLimit: string | null;
+  billingDate: string | null;
+  paymentDueDate: string | null;
   color: string | null;
   isActive: boolean;
+  createdAt: string;
   currentBalance: number;
   availableCredit: number | null;
 }
@@ -25,6 +28,19 @@ export interface AccountInput {
   initialBalance?: string;
   creditLimit?: string;
   color?: string;
+  billingDate?: string;
+  paymentDueDate?: string;
+}
+
+export type AccountMovementKind = "INCOME" | "EXPENSE" | "CARD_PAYMENT" | "LOAN_OUT" | "LOAN_PAYMENT_IN";
+
+export interface AccountMovement {
+  id: string;
+  kind: AccountMovementKind;
+  amount: number;
+  date: string;
+  label: string;
+  description: string | null;
 }
 
 export function useAccounts() {
@@ -64,6 +80,14 @@ export function useDeleteAccount() {
   return useMutation({
     mutationFn: (id: string) => apiClient.delete(`/accounts/${id}`),
     onSuccess: invalidate,
+  });
+}
+
+export function useAccountMovements(id: string | null) {
+  return useQuery({
+    queryKey: ["accounts", id, "movements"],
+    queryFn: () => apiClient.get<AccountMovement[]>(`/accounts/${id}/movements`),
+    enabled: !!id,
   });
 }
 

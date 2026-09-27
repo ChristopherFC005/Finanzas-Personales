@@ -40,6 +40,14 @@ export class AccountsController {
     return this.accountsService.findOne(user.id, id);
   }
 
+  @Get(":id/movements")
+  getMovements(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id", ParseUUIDPipe) id: string,
+  ) {
+    return this.accountsService.getMovements(user.id, id);
+  }
+
   @Post()
   create(
     @CurrentUser() user: AuthenticatedUser,

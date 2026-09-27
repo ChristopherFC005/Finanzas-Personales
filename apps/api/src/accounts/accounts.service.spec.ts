@@ -126,4 +126,88 @@ describe("AccountsService — loans funded from an account", () => {
 
     expect(result.currentBalance).toBe(1000);
   });
+
+  it("credits a loan repayment back to the account that funded it", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const withComputedBalance = (service as any).withComputedBalance.bind(service);
+
+    const result = withComputedBalance(
+      debitAccount,
+      [],
+      [],
+      [{ accountId: "acc-1", _sum: { totalAmount: 300 } }],
+      [{ accountId: "acc-1", _sum: { amount: 120 } }],
+    );
+
+    expect(result.currentBalance).toBe(820); // 1000 - 300 lent + 120 repaid
+  });
+});
+
+describe("AccountsService — credit card billing/payment dates", () => {
+  let service: AccountsService;
+  let prisma: {
+    account: { findUnique: jest.Mock; update: jest.Mock };
+    transaction: { groupBy: jest.Mock };
+    accountPayment: { groupBy: jest.Mock };
+    loan: { groupBy: jest.Mock };
+    loanPayment: { groupBy: jest.Mock };
+  };
+
+  beforeEach(() => {
+    prisma = {
+      account: { findUnique: jest.fn(), update: jest.fn() },
+      transaction: { groupBy: jest.fn().mockResolvedValue([]) },
+      accountPayment: { groupBy: jest.fn().mockResolvedValue([]) },
+      loan: { groupBy: jest.fn().mockResolvedValue([]) },
+      loanPayment: { groupBy: jest.fn().mockResolvedValue([]) },
+    };
+    service = new AccountsService(prisma as unknown as PrismaService);
+  });
+
+  it("rejects setting billingDate on a non-credit account", async () => {
+    prisma.account.findUnique.mockResolvedValue({
+      id: "acc-1",
+      userId: "u1",
+      type: "DEBIT",
+      createdAt: new Date(),
+    });
+
+    await expect(
+      service.update("u1", "acc-1", { billingDate: "2026-01-15" } as never),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.account.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects changing paymentDueDate more than 3 days after creation", async () => {
+    const fourDaysAgo = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000);
+    prisma.account.findUnique.mockResolvedValue({
+      id: "acc-1",
+      userId: "u1",
+      type: "CREDIT",
+      createdAt: fourDaysAgo,
+    });
+
+    await expect(
+      service.update("u1", "acc-1", { paymentDueDate: "2026-01-20" } as never),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.account.update).not.toHaveBeenCalled();
+  });
+
+  it("allows setting both dates within 3 days of creation on a credit account", async () => {
+    const oneDayAgo = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000);
+    prisma.account.findUnique.mockResolvedValue({
+      id: "acc-1",
+      userId: "u1",
+      type: "CREDIT",
+      createdAt: oneDayAgo,
+    });
+    prisma.account.update.mockResolvedValue({});
+
+    await service.update("u1", "acc-1", {
+      billingDate: "2026-01-15",
+      paymentDueDate: "2026-01-25",
+    } as never);
+
+    expect(prisma.account.update).toHaveBeenCalled();
+  });
 });

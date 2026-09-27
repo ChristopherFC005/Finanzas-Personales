@@ -11,10 +11,11 @@ import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoanCard } from "@/components/finance/loan-card";
-import { formatMoney } from "@/lib/utils";
+import { formatMoney, todayLocalISO } from "@/lib/utils";
 
 export default function LoansPage() {
   const [open, setOpen] = useState(false);
@@ -34,6 +35,14 @@ export default function LoansPage() {
   } = useForm<LoanInput>({ defaultValues: { paymentType: "SINGLE" } });
 
   const paymentType = watch("paymentType");
+  const totalAmount = watch("totalAmount");
+  const installmentsCount = watch("installmentsCount");
+  const perInstallment =
+    paymentType === "INSTALLMENTS" &&
+    totalAmount &&
+    Number(installmentsCount) > 0
+      ? Number(totalAmount) / Number(installmentsCount)
+      : null;
   const active = loans?.filter((l) => l.status === "ACTIVE") ?? [];
   const paid = loans?.filter((l) => l.status !== "ACTIVE") ?? [];
   const totalOwed = active.reduce((sum, l) => sum + l.remaining, 0);
@@ -183,32 +192,47 @@ export default function LoansPage() {
           {paymentType === "SINGLE" ? (
             <div>
               <Label htmlFor="dueDate">¿Cuándo te deben pagar?</Label>
-              <Input id="dueDate" type="date" {...register("dueDate", { required: paymentType === "SINGLE" })} />
+              <DatePicker
+                id="dueDate"
+                value={watch("dueDate")}
+                onChange={(v) => setValue("dueDate", v, { shouldValidate: true })}
+                min={todayLocalISO()}
+              />
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="installmentsCount">Número de cuotas</Label>
-                <Input
-                  id="installmentsCount"
-                  type="number"
-                  min={1}
-                  max={120}
-                  {...register("installmentsCount", {
-                    required: paymentType === "INSTALLMENTS",
-                    valueAsNumber: true,
-                  })}
-                />
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="installmentsCount">Número de cuotas</Label>
+                  <Input
+                    id="installmentsCount"
+                    type="number"
+                    min={1}
+                    max={120}
+                    {...register("installmentsCount", {
+                      required: paymentType === "INSTALLMENTS",
+                      valueAsNumber: true,
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="firstDueDate">Primer pago</Label>
+                  <DatePicker
+                    id="firstDueDate"
+                    value={watch("firstDueDate")}
+                    onChange={(v) => setValue("firstDueDate", v, { shouldValidate: true })}
+                    min={todayLocalISO()}
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="firstDueDate">Primer pago</Label>
-                <Input
-                  id="firstDueDate"
-                  type="date"
-                  {...register("firstDueDate", { required: paymentType === "INSTALLMENTS" })}
-                />
-              </div>
-            </div>
+              {perInstallment !== null && (
+                <p className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
+                  El monto total (<span className="font-semibold text-foreground">{formatMoney(totalAmount, currency)}</span>) se
+                  reparte en {installmentsCount} cuotas de{" "}
+                  <span className="font-semibold text-foreground">{formatMoney(perInstallment, currency)}</span> cada una.
+                </p>
+              )}
+            </>
           )}
 
           <div>

@@ -10,11 +10,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AccountCard } from "@/components/finance/account-card";
 import { AccountForm } from "@/components/finance/account-form";
+import { AccountMovementsModal } from "@/components/finance/account-movements";
 import { formatMoney } from "@/lib/utils";
 
 export default function AccountsPage() {
   const [open, setOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [viewingAccount, setViewingAccount] = useState<Account | null>(null);
   const { data: user } = useCurrentUser();
   const currency = user?.preferences?.currency ?? "PEN";
   const { data: accounts, isLoading } = useAccounts();
@@ -67,7 +69,13 @@ export default function AccountsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {accounts.map((a) => (
-            <AccountCard key={a.id} account={a} currency={currency} onEdit={() => openEdit(a)} />
+            <AccountCard
+              key={a.id}
+              account={a}
+              currency={currency}
+              onEdit={() => openEdit(a)}
+              onViewMovements={() => setViewingAccount(a)}
+            />
           ))}
         </div>
       )}
@@ -79,6 +87,12 @@ export default function AccountsPage() {
       >
         <AccountForm account={editingAccount ?? undefined} onSuccess={() => setOpen(false)} />
       </Modal>
+
+      <AccountMovementsModal
+        account={viewingAccount}
+        currency={currency}
+        onClose={() => setViewingAccount(null)}
+      />
     </div>
   );
 }

@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FloatingAddButton } from "@/components/finance/floating-add-button";
-import { cn, formatDate, formatMoney } from "@/lib/utils";
+import { cn, formatDateOnly, formatMoney } from "@/lib/utils";
 
 export default function TransactionsPage() {
   const [page, setPage] = useState(1);
@@ -91,7 +91,7 @@ export default function TransactionsPage() {
                 {data.data.map((t) => (
                   <tr key={t.id} className="border-b border-border last:border-0">
                     <td className="px-4 py-3 text-muted-foreground">
-                      {formatDate(t.transactionDate)}
+                      {formatDateOnly(t.transactionDate)}
                     </td>
                     <td className="px-4 py-3">{t.description || "—"}</td>
                     <td className="px-4 py-3">{t.category.name}</td>

@@ -16,6 +16,7 @@ describe("LoansService", () => {
       groupBy: jest.Mock;
       create: jest.Mock;
       aggregate: jest.Mock;
+      findMany: jest.Mock;
     };
     account: { findUnique: jest.Mock };
     $transaction: jest.Mock;
@@ -30,7 +31,12 @@ describe("LoansService", () => {
         create: jest.fn(),
         update: jest.fn(),
       },
-      loanPayment: { groupBy: jest.fn(), create: jest.fn(), aggregate: jest.fn() },
+      loanPayment: {
+        groupBy: jest.fn(),
+        create: jest.fn(),
+        aggregate: jest.fn(),
+        findMany: jest.fn(),
+      },
       account: { findUnique: jest.fn() },
       $transaction: jest.fn(),
     };
@@ -97,6 +103,39 @@ describe("LoansService", () => {
           accountId: "acc-missing",
         } as never),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe("registering a repayment credits the funding account", () => {
+    it("copies the loan's accountId onto the created LoanPayment", async () => {
+      const loan = {
+        id: "loan-1",
+        userId: "u1",
+        status: "ACTIVE",
+        totalAmount: "300",
+        accountId: "acc-1",
+      };
+      prisma.loan.findUnique.mockResolvedValue(loan);
+      prisma.loanPayment.groupBy.mockResolvedValue([]);
+      prisma.loanPayment.findMany.mockResolvedValue([]);
+
+      const tx = {
+        loanPayment: {
+          create: jest.fn().mockResolvedValue({}),
+        },
+        loan: { update: jest.fn() },
+      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (tx.loanPayment as any).aggregate = jest
+        .fn()
+        .mockResolvedValue({ _sum: { amount: 100 } });
+      prisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(tx));
+
+      await service.registerPayment("u1", "loan-1", { amount: "100" } as never);
+
+      expect(tx.loanPayment.create).toHaveBeenCalledWith({
+        data: { loanId: "loan-1", userId: "u1", amount: "100", accountId: "acc-1" },
+      });
     });
   });
 
