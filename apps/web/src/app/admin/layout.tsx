@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Users, ScrollText, ShieldAlert, LogOut } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -49,6 +50,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="flex min-h-screen bg-background">
       <aside className="glass-surface hidden w-64 flex-col border-l-0 border-t-0 md:flex">
         <div className="flex h-16 items-center gap-2 px-6">
+          <Image src="/logo-icon.png" alt="Cyfra" width={28} height={28} />
           <span className="font-display text-lg font-bold gradient-text">Cyfra</span>
           <span className="rounded bg-accent/15 px-1.5 py-0.5 text-xs font-medium text-accent">
             Admin

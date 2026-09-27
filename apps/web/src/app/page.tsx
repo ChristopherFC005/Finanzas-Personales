@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   ShieldCheck,
   LineChart,
@@ -53,9 +54,7 @@ export default function LandingPage() {
       <header className="glass-surface sticky top-0 z-40 border-l-0 border-r-0 border-t-0">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg gradient-brand text-white shadow-glow">
-              <Zap className="h-4 w-4" fill="currentColor" />
-            </span>
+            <Image src="/logo-icon.png" alt="Cyfra" width={32} height={32} />
             <span className="font-display text-xl font-bold gradient-text">Cyfra</span>
           </div>
           <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">

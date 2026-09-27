@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Zap } from "lucide-react";
+import Image from "next/image";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -10,9 +10,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       />
       <div className="w-full max-w-md">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg gradient-brand text-white shadow-glow">
-            <Zap className="h-4 w-4" fill="currentColor" />
-          </span>
+          <Image src="/logo-icon.png" alt="Cyfra" width={36} height={36} />
           <span className="font-display text-2xl font-bold gradient-text">Cyfra</span>
         </Link>
         <div className="glass-surface animate-fade-up rounded-2xl p-8 shadow-2xl">

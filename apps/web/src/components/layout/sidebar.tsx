@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -10,7 +11,6 @@ import {
   BarChart3,
   Sparkles,
   UserCircle,
-  Zap,
   HandCoins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -37,9 +37,7 @@ export function Sidebar({ className }: { className?: string }) {
       )}
     >
       <div className="flex h-16 items-center gap-2 px-6">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg gradient-brand text-white shadow-glow">
-          <Zap className="h-4 w-4" fill="currentColor" />
-        </span>
+        <Image src="/logo-icon.png" alt="Cyfra" width={32} height={32} />
         <span className="font-display text-lg font-bold gradient-text">Cyfra</span>
       </div>
       <nav className="flex-1 space-y-1 px-3">
