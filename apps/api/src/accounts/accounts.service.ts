@@ -31,7 +31,37 @@ interface LoanPaymentTotal {
   _sum: { amount: unknown };
 }
 
+interface PaymentSentTotal {
+  sourceAccountId: string | null;
+  _sum: { amount: unknown };
+}
+
 const CARD_DATES_EDIT_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+const STATEMENT_AMOUNT_EPSILON = 0.01;
+
+function daysInMonth(y: number, m: number): number {
+  return new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+}
+
+/**
+ * The most recent billing cutoff on or before `asOf`, recurring monthly on
+ * `billingDate`'s day-of-month (clamped to the last day of shorter months,
+ * e.g. a day-31 card cuts on Feb 28/29).
+ */
+function lastCutoffDate(billingDate: Date, asOf: Date): Date {
+  const day = billingDate.getUTCDate();
+  const y = asOf.getUTCFullYear();
+  const m = asOf.getUTCMonth();
+
+  const thisMonthCutoff = new Date(Date.UTC(y, m, Math.min(day, daysInMonth(y, m))));
+  if (thisMonthCutoff.getTime() <= asOf.getTime()) {
+    return thisMonthCutoff;
+  }
+
+  const prevM = m === 0 ? 11 : m - 1;
+  const prevY = m === 0 ? y - 1 : y;
+  return new Date(Date.UTC(prevY, prevM, Math.min(day, daysInMonth(prevY, prevM))));
+}
 
 @Injectable()
 export class AccountsService {
@@ -48,7 +78,7 @@ export class AccountsService {
     }
 
     const accountIds = accounts.map((a) => a.id);
-    const [movements, payments, loans, loanPayments] = await Promise.all([
+    const [movements, payments, loans, loanPayments, paymentsSent] = await Promise.all([
       this.prisma.transaction.groupBy({
         by: ["accountId", "type"],
         where: { userId, deletedAt: null, accountId: { in: accountIds } },
@@ -69,16 +99,26 @@ export class AccountsService {
         where: { userId, accountId: { in: accountIds } },
         _sum: { amount: true },
       }),
+      this.prisma.accountPayment.groupBy({
+        by: ["sourceAccountId"],
+        where: { userId, sourceAccountId: { in: accountIds } },
+        _sum: { amount: true },
+      }),
     ]);
 
-    return accounts.map((account) =>
-      this.withComputedBalance(account, movements, payments, loans, loanPayments),
+    return Promise.all(
+      accounts.map((account) =>
+        this.withStatementDue(
+          userId,
+          this.withComputedBalance(account, movements, payments, loans, loanPayments, paymentsSent),
+        ),
+      ),
     );
   }
 
   async findOne(userId: string, id: string) {
     const account = await this.getOwnedOrThrow(userId, id);
-    const [movements, payments, loans, loanPayments] = await Promise.all([
+    const [movements, payments, loans, loanPayments, paymentsSent] = await Promise.all([
       this.prisma.transaction.groupBy({
         by: ["accountId", "type"],
         where: { userId, deletedAt: null, accountId: id },
@@ -99,8 +139,16 @@ export class AccountsService {
         where: { userId, accountId: id },
         _sum: { amount: true },
       }),
+      this.prisma.accountPayment.groupBy({
+        by: ["sourceAccountId"],
+        where: { userId, sourceAccountId: id },
+        _sum: { amount: true },
+      }),
     ]);
-    return this.withComputedBalance(account, movements, payments, loans, loanPayments);
+    return this.withStatementDue(
+      userId,
+      this.withComputedBalance(account, movements, payments, loans, loanPayments, paymentsSent),
+    );
   }
 
   async create(userId: string, dto: CreateAccountDto) {
@@ -117,7 +165,7 @@ export class AccountsService {
         paymentDueDate: dto.paymentDueDate ? new Date(dto.paymentDueDate) : undefined,
       },
     });
-    return this.withComputedBalance(account, [], [], [], []);
+    return this.withComputedBalance(account, [], [], [], [], []);
   }
 
   async update(userId: string, id: string, dto: UpdateAccountDto) {
@@ -149,14 +197,14 @@ export class AccountsService {
 
   /**
    * Detailed, chronological ledger for a single account: regular
-   * transactions, card payments, money lent out (if this account funded a
-   * loan), and loan repayments credited back to it — everything that moves
-   * this account's balance, in one list.
+   * transactions, card payments (received, and sent to pay another card),
+   * money lent out, and loan repayments credited back to it — everything
+   * that moves this account's balance, in one list.
    */
   async getMovements(userId: string, id: string) {
     await this.getOwnedOrThrow(userId, id);
 
-    const [transactions, payments, loans, loanPayments] = await Promise.all([
+    const [transactions, payments, paymentsSent, loans, loanPayments] = await Promise.all([
       this.prisma.transaction.findMany({
         where: { userId, accountId: id, deletedAt: null },
         include: { category: { select: { name: true, icon: true } } },
@@ -164,6 +212,12 @@ export class AccountsService {
       }),
       this.prisma.accountPayment.findMany({
         where: { userId, accountId: id },
+        include: { sourceAccount: { select: { name: true } } },
+        orderBy: { paidAt: "desc" },
+      }),
+      this.prisma.accountPayment.findMany({
+        where: { userId, sourceAccountId: id },
+        include: { account: { select: { name: true } } },
         orderBy: { paidAt: "desc" },
       }),
       this.prisma.loan.findMany({
@@ -192,6 +246,14 @@ export class AccountsService {
         amount: Number(p.amount),
         date: p.paidAt,
         label: p.isInstallment ? "Pago a cuotas" : "Pago de tarjeta",
+        description: p.sourceAccount ? `desde ${p.sourceAccount.name}` : null,
+      })),
+      ...paymentsSent.map((p) => ({
+        id: p.id,
+        kind: "CARD_PAYMENT_OUT" as const,
+        amount: Number(p.amount),
+        date: p.paidAt,
+        label: `Pago a tarjeta ${p.account.name}`,
         description: null,
       })),
       ...loans.map((l) => ({
@@ -227,6 +289,13 @@ export class AccountsService {
    * line, but a payment made "a cuotas" (installments) only reduces the
    * debt shown — the bank keeps that amount committed to the installment
    * plan, so it must NOT come back as available credit yet.
+   *
+   * Two extra rules on top of that:
+   *  - The money has to come FROM one of the user's own accounts/cards,
+   *    which gets debited exactly like a loan's funding account does.
+   *  - If a billing date is set, you can only pay off what was already
+   *    charged before the last cutoff — charges after it belong to the
+   *    next statement and aren't due yet.
    */
   async payCreditCard(userId: string, id: string, dto: PayCreditCardDto) {
     const account = await this.getOwnedOrThrow(userId, id);
@@ -235,10 +304,26 @@ export class AccountsService {
         "Solo se pueden registrar pagos para tarjetas de crédito.",
       );
     }
+    if (dto.sourceAccountId === id) {
+      throw new BadRequestException(
+        "La cuenta de origen no puede ser la misma tarjeta que estás pagando.",
+      );
+    }
+    await this.getOwnedOrThrow(userId, dto.sourceAccountId);
+
+    if (account.billingDate) {
+      const statementDebt = await this.getStatementDebt(userId, account);
+      if (Number(dto.amount) > statementDebt + STATEMENT_AMOUNT_EPSILON) {
+        throw new BadRequestException(
+          `Solo puedes pagar hasta ${statementDebt.toFixed(2)}, lo que se cargó antes de tu último corte. Las compras después del corte se pagan en el siguiente periodo.`,
+        );
+      }
+    }
 
     await this.prisma.accountPayment.create({
       data: {
         accountId: id,
+        sourceAccountId: dto.sourceAccountId,
         userId,
         amount: dto.amount,
         isInstallment: dto.isInstallment ?? false,
@@ -256,12 +341,92 @@ export class AccountsService {
     return account;
   }
 
+  /**
+   * How much of the LAST closed statement is still unpaid. Debt frozen as
+   * of the cutoff (`debtAsOfCutoff`) never falls just because time passes —
+   * but a payment made *after* the cutoff (which is virtually every real
+   * payment, since you pay once you see the statement) has to reduce it,
+   * or this would never reach zero and would just keep blocking payment
+   * forever. So any credit posted after the cutoff (a payment, or a loan
+   * repayment credited to this card) is applied against the closed
+   * statement first — the same way a real card statement works — before
+   * ever counting toward the newer, not-yet-billed charges.
+   */
+  private async getStatementDebt(userId: string, account: Account): Promise<number> {
+    if (!account.billingDate) return 0;
+    const cutoff = lastCutoffDate(account.billingDate, new Date());
+
+    const [expense, paymentsIn, paymentsOut, loansSent, loanRepaidAsOf, paymentsAfter, loanRepaidAfter] =
+      await Promise.all([
+        this.prisma.transaction.aggregate({
+          where: {
+            userId,
+            accountId: account.id,
+            deletedAt: null,
+            type: "EXPENSE",
+            transactionDate: { lte: cutoff },
+          },
+          _sum: { amount: true },
+        }),
+        this.prisma.accountPayment.aggregate({
+          where: { userId, accountId: account.id, paidAt: { lte: cutoff } },
+          _sum: { amount: true },
+        }),
+        this.prisma.accountPayment.aggregate({
+          where: { userId, sourceAccountId: account.id, paidAt: { lte: cutoff } },
+          _sum: { amount: true },
+        }),
+        this.prisma.loan.aggregate({
+          where: { userId, accountId: account.id, status: { not: "CANCELLED" }, createdAt: { lte: cutoff } },
+          _sum: { totalAmount: true },
+        }),
+        this.prisma.loanPayment.aggregate({
+          where: { userId, accountId: account.id, paidAt: { lte: cutoff } },
+          _sum: { amount: true },
+        }),
+        this.prisma.accountPayment.aggregate({
+          where: { userId, accountId: account.id, paidAt: { gt: cutoff } },
+          _sum: { amount: true },
+        }),
+        this.prisma.loanPayment.aggregate({
+          where: { userId, accountId: account.id, paidAt: { gt: cutoff } },
+          _sum: { amount: true },
+        }),
+      ]);
+
+    const balanceAsOfCutoff =
+      Number(account.initialBalance) -
+      Number(expense._sum.amount ?? 0) +
+      Number(paymentsIn._sum.amount ?? 0) -
+      Number(paymentsOut._sum.amount ?? 0) -
+      Number(loansSent._sum.totalAmount ?? 0) +
+      Number(loanRepaidAsOf._sum.amount ?? 0);
+    const debtAsOfCutoff = balanceAsOfCutoff < 0 ? -balanceAsOfCutoff : 0;
+
+    const creditedAfterCutoff =
+      Number(paymentsAfter._sum.amount ?? 0) + Number(loanRepaidAfter._sum.amount ?? 0);
+
+    return Math.max(0, debtAsOfCutoff - creditedAfterCutoff);
+  }
+
+  private async withStatementDue<T extends Account>(
+    userId: string,
+    account: T,
+  ): Promise<T & { statementDue: number | null }> {
+    if (account.type !== "CREDIT" || !account.billingDate) {
+      return { ...account, statementDue: null };
+    }
+    const statementDue = await this.getStatementDebt(userId, account);
+    return { ...account, statementDue };
+  }
+
   private withComputedBalance(
     account: Account,
     movements: MovementTotal[],
     payments: PaymentTotal[],
     loans: LoanTotal[] = [],
     loanPayments: LoanPaymentTotal[] = [],
+    paymentsSent: PaymentSentTotal[] = [],
   ) {
     const income = Number(
       movements.find((m) => m.accountId === account.id && m.type === "INCOME")?._sum
@@ -289,12 +454,23 @@ export class AccountsService {
     const loanRepaid = loanPayments
       .filter((lp) => lp.accountId === account.id)
       .reduce((sum, lp) => sum + Number(lp._sum.amount ?? 0), 0);
+    // Using this account/card to pay off ANOTHER card leaves this one too —
+    // same idea as a loan, just funding a payment instead of a person.
+    const sentToOtherCards = paymentsSent
+      .filter((p) => p.sourceAccountId === account.id)
+      .reduce((sum, p) => sum + Number(p._sum.amount ?? 0), 0);
 
     // Card payments reduce debt (increase the balance toward/above zero)
     // exactly like income would, but never flow through the Transaction
     // ledger — a credit card cannot receive "income" (spec: point 5).
     const currentBalance =
-      Number(account.initialBalance) + income - expense + totalPayments - lent + loanRepaid;
+      Number(account.initialBalance) +
+      income -
+      expense +
+      totalPayments -
+      lent +
+      loanRepaid -
+      sentToOtherCards;
     const creditLimit = account.creditLimit ? Number(account.creditLimit) : null;
 
     return {

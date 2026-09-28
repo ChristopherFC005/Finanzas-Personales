@@ -2,6 +2,7 @@
 
 import {
   ArrowDownCircle,
+  ArrowUpCircle,
   CreditCard,
   HandCoins,
   TrendingDown,
@@ -22,6 +23,7 @@ const KIND_CONFIG: Record<
   INCOME: { icon: TrendingUp, inflow: true, iconTone: "bg-success/15 text-success", dateOnly: true },
   EXPENSE: { icon: TrendingDown, inflow: false, iconTone: "bg-danger/15 text-danger", dateOnly: true },
   CARD_PAYMENT: { icon: CreditCard, inflow: true, iconTone: "bg-success/15 text-success", dateOnly: false },
+  CARD_PAYMENT_OUT: { icon: ArrowUpCircle, inflow: false, iconTone: "bg-danger/15 text-danger", dateOnly: false },
   LOAN_OUT: { icon: HandCoins, inflow: false, iconTone: "bg-accent/15 text-accent", dateOnly: false },
   LOAN_PAYMENT_IN: { icon: ArrowDownCircle, inflow: true, iconTone: "bg-success/15 text-success", dateOnly: false },
 };

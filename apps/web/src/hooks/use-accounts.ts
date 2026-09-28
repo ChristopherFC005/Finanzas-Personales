@@ -19,6 +19,9 @@ export interface Account {
   createdAt: string;
   currentBalance: number;
   availableCredit: number | null;
+  /** Debt as of the last billing cutoff — what you can actually pay right
+   * now. Only set for credit cards that have a billingDate configured. */
+  statementDue: number | null;
 }
 
 export interface AccountInput {
@@ -32,7 +35,13 @@ export interface AccountInput {
   paymentDueDate?: string;
 }
 
-export type AccountMovementKind = "INCOME" | "EXPENSE" | "CARD_PAYMENT" | "LOAN_OUT" | "LOAN_PAYMENT_IN";
+export type AccountMovementKind =
+  | "INCOME"
+  | "EXPENSE"
+  | "CARD_PAYMENT"
+  | "CARD_PAYMENT_OUT"
+  | "LOAN_OUT"
+  | "LOAN_PAYMENT_IN";
 
 export interface AccountMovement {
   id: string;
@@ -97,12 +106,19 @@ export function usePayCreditCard() {
     mutationFn: ({
       id,
       amount,
+      sourceAccountId,
       isInstallment,
     }: {
       id: string;
       amount: string;
+      sourceAccountId: string;
       isInstallment: boolean;
-    }) => apiClient.post<Account>(`/accounts/${id}/payments`, { amount, isInstallment }),
+    }) =>
+      apiClient.post<Account>(`/accounts/${id}/payments`, {
+        amount,
+        sourceAccountId,
+        isInstallment,
+      }),
     onSuccess: invalidate,
   });
 }

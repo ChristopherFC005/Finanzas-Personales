@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { CreditCard, Pencil, Trash2 } from "lucide-react";
-import { Account, useDeleteAccount, usePayCreditCard } from "@/hooks/use-accounts";
+import { Account, useAccounts, useDeleteAccount, usePayCreditCard } from "@/hooks/use-accounts";
 import { ACCOUNT_TYPE_ICONS, ACCOUNT_TYPE_LABELS, metallicGradient } from "@/lib/accounts";
 import { hexToHsl } from "@/lib/color";
 import { cn, formatDateOnly, formatMoney } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
 export function AccountCard({
   account,
@@ -21,9 +22,12 @@ export function AccountCard({
 }) {
   const [payOpen, setPayOpen] = useState(false);
   const [amount, setAmount] = useState("");
+  const [sourceAccountId, setSourceAccountId] = useState("");
   const [isInstallment, setIsInstallment] = useState(false);
   const deleteAccount = useDeleteAccount();
   const payCreditCard = usePayCreditCard();
+  const { data: allAccounts } = useAccounts();
+  const otherAccounts = allAccounts?.filter((a) => a.id !== account.id) ?? [];
 
   const Icon = ACCOUNT_TYPE_ICONS[account.type];
   const isCredit = account.type === "CREDIT";
@@ -41,12 +45,13 @@ export function AccountCard({
   const mutedTextTone = useDarkText ? "text-slate-900/70" : "text-white/70";
 
   function handlePay() {
-    if (!amount) return;
+    if (!amount || !sourceAccountId) return;
     payCreditCard.mutate(
-      { id: account.id, amount, isInstallment },
+      { id: account.id, amount, sourceAccountId, isInstallment },
       {
         onSuccess: () => {
           setAmount("");
+          setSourceAccountId("");
           setIsInstallment(false);
           setPayOpen(false);
         },
@@ -146,6 +151,12 @@ export function AccountCard({
           </p>
         )}
 
+        {isCredit && account.statementDue !== null && account.statementDue > 0 && (
+          <p className={cn("mt-1 text-[11px] font-medium", mutedTextTone)}>
+            A pagar de este periodo: {formatMoney(account.statementDue, currency)}
+          </p>
+        )}
+
         {isCredit && !payOpen && (
           <button
             onClick={(e) => {
@@ -174,6 +185,19 @@ export function AccountCard({
               onChange={(e) => setAmount(e.target.value)}
               className="h-8 border-none bg-white/90 text-xs text-slate-900 placeholder:text-slate-500"
             />
+            <Select
+              value={sourceAccountId}
+              onChange={(e) => setSourceAccountId(e.target.value)}
+              className="h-8 border-none bg-white/90 text-xs text-slate-900"
+            >
+              <option value="">¿Desde qué cuenta pagas?</option>
+              {otherAccounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                  {a.bank && a.bank !== a.name ? ` · ${a.bank}` : ""}
+                </option>
+              ))}
+            </Select>
             <label className={cn("flex items-center gap-1.5 text-[11px]", mutedTextTone)}>
               <input
                 type="checkbox"
@@ -185,9 +209,9 @@ export function AccountCard({
             <div className="flex gap-2">
               <button
                 onClick={handlePay}
-                disabled={payCreditCard.isPending}
+                disabled={payCreditCard.isPending || !amount || !sourceAccountId}
                 className={cn(
-                  "flex-1 rounded-lg py-1.5 text-xs font-semibold",
+                  "flex-1 rounded-lg py-1.5 text-xs font-semibold disabled:opacity-50",
                   useDarkText ? "bg-slate-900 text-white" : "bg-white text-slate-900",
                 )}
               >
@@ -200,6 +224,13 @@ export function AccountCard({
                 Cancelar
               </button>
             </div>
+            {payCreditCard.isError && (
+              <p className="text-[11px] text-red-200">
+                {payCreditCard.error instanceof Error
+                  ? payCreditCard.error.message
+                  : "No se pudo registrar el pago."}
+              </p>
+            )}
           </div>
         )}
       </div>
