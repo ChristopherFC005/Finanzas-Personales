@@ -106,6 +106,14 @@ enum LoanStatus {
   @@map("loan_status")
 }
 
+enum GoalInviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+
+  @@map("goal_invite_status")
+}
+
 model Profile {
   id          String     @id @db.Uuid
   firstName   String     @map("first_name")
@@ -129,6 +137,11 @@ model Profile {
   preferences   UserPreferences?
   notifications Notification[]
   auditLogs     AuditLog[]        @relation("AuditActor")
+
+  goalCollaborations      GoalCollaborator[] @relation("GoalCollaborator")
+  goalCollaboratorsInvited GoalCollaborator[] @relation("GoalCollaboratorInvitedBy")
+  goalInvitesCreated      GoalInvite[]       @relation("GoalInviteCreatedBy")
+  goalInvitesAccepted     GoalInvite[]       @relation("GoalInviteAcceptedBy")
 
   @@map("profiles")
 }
@@ -237,11 +250,55 @@ model SavingsGoal {
   createdAt     DateTime   @default(now()) @map("created_at")
   updatedAt     DateTime   @updatedAt @map("updated_at")
 
-  user      Profile        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  movements GoalMovement[]
+  user          Profile            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movements     GoalMovement[]
+  collaborators GoalCollaborator[]
+  invites       GoalInvite[]
 
   @@index([userId, status])
   @@map("savings_goals")
+}
+
+/**
+ * A second person, with their own Cyfra account, who accepted an invite to
+ * contribute to someone else's goal. The goal is still owned by its
+ * creator (only they can edit/delete it or invite others); a collaborator
+ * can view it and deposit/withdraw like the owner can.
+ */
+model GoalCollaborator {
+  id              String   @id @default(uuid()) @db.Uuid
+  goalId          String   @map("goal_id") @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  invitedByUserId String   @map("invited_by_user_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  goal      SavingsGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  user      Profile     @relation("GoalCollaborator", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy Profile     @relation("GoalCollaboratorInvitedBy", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+
+  @@unique([goalId, userId])
+  @@index([userId])
+  @@map("goal_collaborators")
+}
+
+/** A single-use, shareable link the goal's owner generates to invite one
+ * specific person to become a collaborator. */
+model GoalInvite {
+  id               String           @id @default(uuid()) @db.Uuid
+  goalId           String           @map("goal_id") @db.Uuid
+  token            String           @unique
+  createdByUserId  String           @map("created_by_user_id") @db.Uuid
+  status           GoalInviteStatus @default(PENDING)
+  acceptedByUserId String?          @map("accepted_by_user_id") @db.Uuid
+  createdAt        DateTime         @default(now()) @map("created_at")
+  acceptedAt       DateTime?        @map("accepted_at")
+
+  goal       SavingsGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  createdBy  Profile     @relation("GoalInviteCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  acceptedBy Profile?    @relation("GoalInviteAcceptedBy", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([goalId])
+  @@map("goal_invites")
 }
 
 model GoalMovement {

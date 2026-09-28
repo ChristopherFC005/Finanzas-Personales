@@ -80,4 +80,12 @@ export class GoalsController {
   ) {
     return this.goalsService.withdraw(user.id, id, dto);
   }
+
+  @Post(":id/invite")
+  createInvite(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id", ParseUUIDPipe) id: string,
+  ) {
+    return this.goalsService.createInvite(user.id, id);
+  }
 }

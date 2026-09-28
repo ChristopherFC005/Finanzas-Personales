@@ -3,31 +3,47 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { randomBytes } from "crypto";
 import { PrismaService } from "../common/prisma/prisma.service";
 import { CreateGoalDto } from "./dto/create-goal.dto";
 import { UpdateGoalDto } from "./dto/update-goal.dto";
 import { CreateMovementDto } from "./dto/create-movement.dto";
+
+const COLLABORATOR_SELECT = {
+  id: true,
+  userId: true,
+  user: { select: { id: true, firstName: true, lastName: true } },
+};
 
 @Injectable()
 export class GoalsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(userId: string) {
-    return this.prisma.savingsGoal.findMany({
-      where: { userId },
+    const goals = await this.prisma.savingsGoal.findMany({
+      where: { OR: [{ userId }, { collaborators: { some: { userId } } }] },
+      include: { collaborators: { select: COLLABORATOR_SELECT } },
       orderBy: { createdAt: "desc" },
     });
+    return goals.map((goal) => ({ ...goal, isOwner: goal.userId === userId }));
   }
 
   async findOne(userId: string, id: string) {
     const goal = await this.prisma.savingsGoal.findFirst({
-      where: { id, userId },
-      include: { movements: { orderBy: { createdAt: "desc" }, take: 20 } },
+      where: { id, OR: [{ userId }, { collaborators: { some: { userId } } }] },
+      include: {
+        movements: {
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          include: { user: { select: { firstName: true, lastName: true } } },
+        },
+        collaborators: { select: COLLABORATOR_SELECT },
+      },
     });
     if (!goal) {
       throw new NotFoundException("Meta no encontrada.");
     }
-    return goal;
+    return { ...goal, isOwner: goal.userId === userId };
   }
 
   async create(userId: string, dto: CreateGoalDto) {
@@ -60,7 +76,7 @@ export class GoalsService {
 
   /** Atomic deposit: increments currentAmount and records history in one transaction. */
   async deposit(userId: string, id: string, dto: CreateMovementDto) {
-    await this.getOwnedOrThrow(userId, id);
+    await this.getAccessibleOrThrow(userId, id);
 
     return this.prisma.$transaction(async (tx) => {
       const goal = await tx.savingsGoal.update({
@@ -89,13 +105,12 @@ export class GoalsService {
    * succeed against insufficient funds (no read-balance-then-write race).
    */
   async withdraw(userId: string, id: string, dto: CreateMovementDto) {
-    await this.getOwnedOrThrow(userId, id);
+    await this.getAccessibleOrThrow(userId, id);
 
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.savingsGoal.updateMany({
         where: {
           id,
-          userId,
           currentAmount: { gte: dto.amount },
         },
         data: { currentAmount: { decrement: dto.amount } },
@@ -115,9 +130,83 @@ export class GoalsService {
     });
   }
 
+  /** Only the goal's creator can invite someone else to it — a single-use link. */
+  async createInvite(userId: string, goalId: string) {
+    await this.getOwnedOrThrow(userId, goalId);
+
+    const token = randomBytes(24).toString("base64url");
+    await this.prisma.goalInvite.create({
+      data: { goalId, token, createdByUserId: userId },
+    });
+
+    const baseUrl = (process.env.FRONTEND_URL ?? "").replace(/\/$/, "");
+    return { token, url: `${baseUrl}/dashboard/goals/join/${token}` };
+  }
+
+  /** Read-only preview shown before the invitee decides to accept. */
+  async getInvitePreview(token: string) {
+    const invite = await this.prisma.goalInvite.findUnique({
+      where: { token },
+      include: {
+        goal: { select: { name: true, targetAmount: true, currentAmount: true } },
+        createdBy: { select: { firstName: true, lastName: true } },
+      },
+    });
+    if (!invite || invite.status !== "PENDING") {
+      throw new NotFoundException("Esta invitación ya no está disponible.");
+    }
+    return {
+      goalName: invite.goal.name,
+      targetAmount: invite.goal.targetAmount,
+      currentAmount: invite.goal.currentAmount,
+      invitedByName: `${invite.createdBy.firstName} ${invite.createdBy.lastName}`.trim(),
+    };
+  }
+
+  async acceptInvite(userId: string, token: string) {
+    const invite = await this.prisma.goalInvite.findUnique({ where: { token } });
+    if (!invite || invite.status !== "PENDING") {
+      throw new NotFoundException("Esta invitación ya no está disponible.");
+    }
+    if (invite.createdByUserId === userId) {
+      throw new BadRequestException("No puedes aceptar tu propia invitación.");
+    }
+
+    const alreadyCollaborator = await this.prisma.goalCollaborator.findUnique({
+      where: { goalId_userId: { goalId: invite.goalId, userId } },
+    });
+    if (alreadyCollaborator) {
+      throw new BadRequestException("Ya colaboras en esta meta.");
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.goalCollaborator.create({
+        data: { goalId: invite.goalId, userId, invitedByUserId: invite.createdByUserId },
+      }),
+      this.prisma.goalInvite.update({
+        where: { id: invite.id },
+        data: { status: "ACCEPTED", acceptedByUserId: userId, acceptedAt: new Date() },
+      }),
+    ]);
+
+    return this.findOne(userId, invite.goalId);
+  }
+
+  /** Strict ownership — for editing, deleting, or inviting to a goal. */
   private async getOwnedOrThrow(userId: string, id: string) {
     const goal = await this.prisma.savingsGoal.findUnique({ where: { id } });
     if (!goal || goal.userId !== userId) {
+      throw new NotFoundException("Meta no encontrada.");
+    }
+    return goal;
+  }
+
+  /** Owner OR an accepted collaborator — for viewing/depositing/withdrawing. */
+  private async getAccessibleOrThrow(userId: string, id: string) {
+    const goal = await this.prisma.savingsGoal.findFirst({
+      where: { id, OR: [{ userId }, { collaborators: { some: { userId } } }] },
+    });
+    if (!goal) {
       throw new NotFoundException("Meta no encontrada.");
     }
     return goal;

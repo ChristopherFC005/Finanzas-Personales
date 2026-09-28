@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Minus, Plus, Trash2 } from "lucide-react";
-import { Goal, useDepositGoal, useWithdrawGoal } from "@/hooks/use-goals";
+import { Check, Copy, Minus, Plus, Share2, Trash2, Users } from "lucide-react";
+import { Goal, useCreateGoalInvite, useDepositGoal, useWithdrawGoal } from "@/hooks/use-goals";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -19,8 +19,27 @@ export function GoalCard({
 }) {
   const [amount, setAmount] = useState("");
   const [frequency, setFrequency] = useState<"MONTHLY" | "BIWEEKLY">("MONTHLY");
+  const [shareOpen, setShareOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const deposit = useDepositGoal();
   const withdraw = useWithdrawGoal();
+  const createInvite = useCreateGoalInvite();
+
+  async function handleShare() {
+    setShareOpen(true);
+    createInvite.mutate(goal.id);
+  }
+
+  async function copyLink(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard access can be blocked (permissions, insecure context) —
+      // the link is still shown selectable in the box either way.
+    }
+  }
 
   const percentage = Math.min(
     100,
@@ -69,11 +88,68 @@ export function GoalCard({
               Meta: {formatDateOnly(goal.targetDate)}
             </p>
           )}
+          {goal.collaborators.length > 0 && (
+            <p className="mt-1 flex items-center gap-1 text-xs text-accent">
+              <Users className="h-3 w-3" />
+              Compartida con {goal.collaborators.map((c) => c.user.firstName).join(", ")}
+            </p>
+          )}
+          {!goal.isOwner && (
+            <p className="mt-1 text-xs text-muted-foreground">Colaboras en esta meta</p>
+          )}
         </div>
-        <button onClick={onDelete} className="text-muted-foreground hover:text-danger">
-          <Trash2 className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          {goal.isOwner && (
+            <button
+              onClick={handleShare}
+              className="text-muted-foreground hover:text-accent"
+              aria-label="Compartir meta"
+              title="Compartir meta"
+            >
+              <Share2 className="h-4 w-4" />
+            </button>
+          )}
+          {goal.isOwner && (
+            <button onClick={onDelete} className="text-muted-foreground hover:text-danger">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
+
+      {shareOpen && (
+        <div className="mt-3 rounded-lg bg-muted p-2.5">
+          {createInvite.isPending ? (
+            <p className="text-xs text-muted-foreground">Generando link…</p>
+          ) : createInvite.isError ? (
+            <p className="text-xs text-danger">No se pudo generar el link. Intenta de nuevo.</p>
+          ) : createInvite.data ? (
+            <>
+              <p className="text-xs text-muted-foreground">
+                Comparte este link con la persona que quieres invitar (necesita cuenta en Cyfra):
+              </p>
+              <div className="mt-1.5 flex gap-1.5">
+                <Input readOnly value={createInvite.data.url} className="h-8 text-xs" />
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => copyLink(createInvite.data!.url)}
+                  title="Copiar link"
+                >
+                  {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                </Button>
+              </div>
+            </>
+          ) : null}
+          <button
+            onClick={() => setShareOpen(false)}
+            className="mt-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+          >
+            Cerrar
+          </button>
+        </div>
+      )}
 
       <div className="mt-4">
         <div className="flex items-baseline justify-between text-sm">
