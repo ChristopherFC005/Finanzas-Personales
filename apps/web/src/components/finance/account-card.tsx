@@ -31,6 +31,16 @@ export function AccountCard({
 
   const Icon = ACCOUNT_TYPE_ICONS[account.type];
   const isCredit = account.type === "CREDIT";
+  const hasDebt = account.currentBalance < 0;
+  // With a billing date set, only the closed statement is payable
+  // (statementDue); without one there's no cycle to check, just whether
+  // there's any debt at all. Either way, paying needs somewhere to pay
+  // FROM — no point showing the button with no other account to pick.
+  const canPay =
+    isCredit &&
+    hasDebt &&
+    (account.statementDue === null || account.statementDue > 0) &&
+    otherAccounts.length > 0;
   const creditLimit = account.creditLimit ? Number(account.creditLimit) : null;
   const usedPercent =
     isCredit && creditLimit && creditLimit > 0
@@ -157,7 +167,13 @@ export function AccountCard({
           </p>
         )}
 
-        {isCredit && !payOpen && (
+        {isCredit && hasDebt && account.statementDue === 0 && (
+          <p className={cn("mt-1 text-[11px]", mutedTextTone)}>
+            Ya pagaste lo de este periodo — lo demás se factura el próximo corte.
+          </p>
+        )}
+
+        {canPay && !payOpen && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -173,7 +189,7 @@ export function AccountCard({
           </button>
         )}
 
-        {isCredit && payOpen && (
+        {canPay && payOpen && (
           <div
             className="mt-3 space-y-2 rounded-lg bg-black/10 p-2.5"
             onClick={(e) => e.stopPropagation()}
