@@ -49,6 +49,24 @@ async function request<T>(
   return body as T;
 }
 
+async function requestBlob(path: string): Promise<Blob> {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const response = await fetch(`${API_URL}${path}`, {
+    headers: session ? { authorization: `Bearer ${session.access_token}` } : {},
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new ApiError(response.status, body?.code ?? "ERROR", body?.message ?? "Ocurrió un error inesperado.");
+  }
+
+  return response.blob();
+}
+
 export const apiClient = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, data?: unknown) =>
@@ -56,4 +74,5 @@ export const apiClient = {
   patch: <T>(path: string, data?: unknown) =>
     request<T>(path, { method: "PATCH", body: data ? JSON.stringify(data) : undefined }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  getBlob: (path: string) => requestBlob(path),
 };

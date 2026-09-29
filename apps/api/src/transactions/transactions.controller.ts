@@ -10,23 +10,30 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from "@nestjs/common";
+import { Response } from "express";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { AuthenticatedUser } from "../auth/auth.types";
 import { TransactionsService } from "./transactions.service";
+import { TransactionsExportService } from "./transactions-export.service";
 import { CreateTransactionDto } from "./dto/create-transaction.dto";
 import { UpdateTransactionDto } from "./dto/update-transaction.dto";
 import { QueryTransactionsDto } from "./dto/query-transactions.dto";
+import { ExportTransactionsDto } from "./dto/export-transactions.dto";
 
 @ApiTags("transactions")
 @ApiBearerAuth()
 @UseGuards(SupabaseAuthGuard)
 @Controller("transactions")
 export class TransactionsController {
-  constructor(private readonly transactionsService: TransactionsService) {}
+  constructor(
+    private readonly transactionsService: TransactionsService,
+    private readonly exportService: TransactionsExportService,
+  ) {}
 
   @Get()
   findAll(
@@ -34,6 +41,32 @@ export class TransactionsController {
     @Query() query: QueryTransactionsDto,
   ) {
     return this.transactionsService.findAll(user.id, query);
+  }
+
+  @Get("export/csv")
+  async exportCsv(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ExportTransactionsDto,
+    @Res() res: Response,
+  ) {
+    const transactions = await this.transactionsService.findAllForExport(user.id, query);
+    const csv = this.exportService.toCsv(transactions);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", 'attachment; filename="movimientos.csv"');
+    res.send(csv);
+  }
+
+  @Get("export/pdf")
+  async exportPdf(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ExportTransactionsDto,
+    @Res() res: Response,
+  ) {
+    const transactions = await this.transactionsService.findAllForExport(user.id, query);
+    const pdf = await this.exportService.toPdf(transactions, query.currency ?? "PEN");
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="movimientos.pdf"');
+    res.send(pdf);
   }
 
   @Get(":id")

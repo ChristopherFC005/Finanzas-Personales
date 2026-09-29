@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeftRight, Trash2 } from "lucide-react";
+import { ArrowLeftRight, Download, Trash2 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   useDeleteTransaction,
   useTransactions,
 } from "@/hooks/use-transactions";
+import { apiClient } from "@/lib/api/client";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -16,10 +17,26 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FloatingAddButton } from "@/components/finance/floating-add-button";
 import { cn, formatDateOnly, formatMoney } from "@/lib/utils";
 
+async function downloadExport(format: "csv" | "pdf", search: string, type: string, currency: string) {
+  const params = new URLSearchParams();
+  if (search) params.set("search", search);
+  if (type) params.set("type", type);
+  if (format === "pdf") params.set("currency", currency);
+
+  const blob = await apiClient.getBlob(`/transactions/export/${format}?${params.toString()}`);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `movimientos.${format}`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function TransactionsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [type, setType] = useState<"" | "INCOME" | "EXPENSE">("");
+  const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
   const { data: user } = useCurrentUser();
   const currency = user?.preferences?.currency ?? "PEN";
 
@@ -30,6 +47,15 @@ export default function TransactionsPage() {
     type: type || undefined,
   });
   const deleteTransaction = useDeleteTransaction();
+
+  async function handleExport(format: "csv" | "pdf") {
+    setExporting(format);
+    try {
+      await downloadExport(format, search, type, currency);
+    } finally {
+      setExporting(null);
+    }
+  }
 
   return (
     <div className="space-y-6 pb-20">
@@ -57,6 +83,26 @@ export default function TransactionsPage() {
             <option value="INCOME">Ingresos</option>
             <option value="EXPENSE">Gastos</option>
           </Select>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport("csv")}
+              disabled={exporting !== null}
+            >
+              <Download className="h-4 w-4" />
+              Excel
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport("pdf")}
+              disabled={exporting !== null}
+            >
+              <Download className="h-4 w-4" />
+              PDF
+            </Button>
+          </div>
         </div>
       </div>
 

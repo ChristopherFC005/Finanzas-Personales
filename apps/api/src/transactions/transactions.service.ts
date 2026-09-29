@@ -30,25 +30,7 @@ export class TransactionsService {
   async findAll(userId: string, query: QueryTransactionsDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-
-    const where: Prisma.TransactionWhereInput = {
-      userId,
-      deletedAt: null,
-      type: query.type,
-      categoryId: query.categoryId,
-      accountId: query.accountId,
-      paymentMethod: query.paymentMethod,
-      transactionDate:
-        query.dateFrom || query.dateTo
-          ? {
-              gte: query.dateFrom ? new Date(query.dateFrom) : undefined,
-              lte: query.dateTo ? new Date(query.dateTo) : undefined,
-            }
-          : undefined,
-      description: query.search
-        ? { contains: query.search, mode: "insensitive" }
-        : undefined,
-    };
+    const where = this.buildWhere(userId, query);
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.transaction.findMany({
@@ -138,6 +120,36 @@ export class TransactionsService {
       where: { id },
       data: { deletedAt: new Date() },
     });
+  }
+
+  /** All transactions matching the same filters as `findAll`, unpaginated — for exports. */
+  async findAllForExport(userId: string, query: QueryTransactionsDto) {
+    return this.prisma.transaction.findMany({
+      where: this.buildWhere(userId, query),
+      include: { category: true, account: true },
+      orderBy: { [query.sortBy ?? "transactionDate"]: query.sortOrder ?? "desc" },
+    });
+  }
+
+  private buildWhere(userId: string, query: QueryTransactionsDto): Prisma.TransactionWhereInput {
+    return {
+      userId,
+      deletedAt: null,
+      type: query.type,
+      categoryId: query.categoryId,
+      accountId: query.accountId,
+      paymentMethod: query.paymentMethod,
+      transactionDate:
+        query.dateFrom || query.dateTo
+          ? {
+              gte: query.dateFrom ? new Date(query.dateFrom) : undefined,
+              lte: query.dateTo ? new Date(query.dateTo) : undefined,
+            }
+          : undefined,
+      description: query.search
+        ? { contains: query.search, mode: "insensitive" }
+        : undefined,
+    };
   }
 
   private async assertCategoryUsable(
