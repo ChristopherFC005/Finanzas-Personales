@@ -58,6 +58,41 @@ export class StatisticsService {
     };
   }
 
+  async byCategory(userId: string, query: QueryStatisticsDto) {
+    const { start, end } = this.resolveRange(query);
+
+    const rows = await this.prisma.transaction.groupBy({
+      by: ["categoryId"],
+      where: {
+        userId,
+        type: "EXPENSE",
+        deletedAt: null,
+        transactionDate: { gte: start, lt: end },
+      },
+      _sum: { amount: true },
+      orderBy: { _sum: { amount: "desc" } },
+    });
+    if (rows.length === 0) return [];
+
+    const categories = await this.prisma.category.findMany({
+      where: { id: { in: rows.map((r) => r.categoryId) } },
+      select: { id: true, name: true, icon: true },
+    });
+    const total = rows.reduce((sum, r) => sum + Number(r._sum.amount ?? 0), 0);
+
+    return rows.map((r) => {
+      const category = categories.find((c) => c.id === r.categoryId);
+      const amount = Number(r._sum.amount ?? 0);
+      return {
+        categoryId: r.categoryId,
+        name: category?.name ?? "Sin categoría",
+        icon: category?.icon ?? null,
+        amount,
+        percentage: total > 0 ? amount / total : 0,
+      };
+    });
+  }
+
   private async totalsFor(userId: string, start: Date, end: Date) {
     const rows = await this.prisma.transaction.groupBy({
       by: ["type"],

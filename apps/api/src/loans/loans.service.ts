@@ -57,6 +57,7 @@ export class LoansService {
         totalAmount: dto.totalAmount,
         paymentType: dto.paymentType,
         accountId: dto.accountId,
+        isExternal: dto.isExternal ?? false,
         dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
         installmentsCount: dto.installmentsCount,
         firstDueDate: dto.firstDueDate ? new Date(dto.firstDueDate) : undefined,

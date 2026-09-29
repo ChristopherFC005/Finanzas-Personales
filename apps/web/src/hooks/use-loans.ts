@@ -17,6 +17,7 @@ export interface Loan {
   notes: string | null;
   status: LoanStatus;
   accountId: string | null;
+  isExternal: boolean;
   account: { name: string; bank: string | null; type: string } | null;
   amountReceived: number;
   remaining: number;
@@ -29,6 +30,7 @@ export interface LoanInput {
   totalAmount: string;
   paymentType: LoanPaymentType;
   accountId: string;
+  isExternal?: boolean;
   dueDate?: string;
   installmentsCount?: number;
   firstDueDate?: string;
@@ -42,14 +44,9 @@ export function useLoans() {
   });
 }
 
-function useInvalidateLoans() {
-  const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: ["loans"] });
-}
-
-// Lending money out (and deleting that loan) changes the funding account's
-// balance, so the accounts list needs to refresh too — registering a
-// repayment doesn't (it never flows back into an account, see backend).
+// Lending money out, deleting a loan, and registering a repayment all move
+// an account's balance (funding it, reversing it, or crediting the
+// repayment back), so the accounts list needs to refresh in every case.
 function useInvalidateLoansAndAccounts() {
   const queryClient = useQueryClient();
   return () => {
@@ -75,7 +72,7 @@ export function useDeleteLoan() {
 }
 
 export function useRegisterLoanPayment() {
-  const invalidate = useInvalidateLoans();
+  const invalidate = useInvalidateLoansAndAccounts();
   return useMutation({
     mutationFn: ({ id, amount }: { id: string; amount: string }) =>
       apiClient.post<Loan>(`/loans/${id}/payments`, { amount }),

@@ -20,4 +20,12 @@ export class StatisticsController {
   ) {
     return this.statisticsService.summary(user.id, query);
   }
+
+  @Get("by-category")
+  byCategory(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: QueryStatisticsDto,
+  ) {
+    return this.statisticsService.byCategory(user.id, query);
+  }
 }

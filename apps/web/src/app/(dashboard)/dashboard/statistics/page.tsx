@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { useStatisticsSummary } from "@/hooks/use-statistics";
+import { useStatisticsByCategory, useStatisticsSummary } from "@/hooks/use-statistics";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IncomeExpenseChart } from "@/components/finance/income-expense-chart";
+import { CategoryBreakdownChart } from "@/components/finance/category-breakdown-chart";
 import { formatMoney, formatPercent } from "@/lib/utils";
 
 const PERIODS = [
@@ -21,6 +22,7 @@ export default function StatisticsPage() {
   const { data: user } = useCurrentUser();
   const currency = user?.preferences?.currency ?? "PEN";
   const { data, isLoading } = useStatisticsSummary(period);
+  const { data: byCategory, isLoading: isLoadingByCategory } = useStatisticsByCategory(period);
 
   return (
     <div className="space-y-6">
@@ -75,6 +77,12 @@ export default function StatisticsPage() {
               </p>
             </Card>
           </div>
+
+          {isLoadingByCategory ? (
+            <Skeleton className="h-72" />
+          ) : (
+            <CategoryBreakdownChart data={byCategory ?? []} currency={currency} />
+          )}
         </>
       )}
     </div>

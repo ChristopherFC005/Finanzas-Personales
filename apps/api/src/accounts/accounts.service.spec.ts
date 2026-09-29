@@ -357,3 +357,70 @@ describe("AccountsService — credit card billing/payment dates", () => {
     expect(prisma.account.update).toHaveBeenCalled();
   });
 });
+
+describe("AccountsService — external loans excluded from balance", () => {
+  let service: AccountsService;
+  let prisma: {
+    account: { findUnique: jest.Mock };
+    accountPayment: { groupBy: jest.Mock };
+    transaction: { groupBy: jest.Mock };
+    loan: { groupBy: jest.Mock; findMany: jest.Mock };
+    loanPayment: { groupBy: jest.Mock };
+  };
+
+  const debitAccount = {
+    id: "acc-1",
+    userId: "u1",
+    type: "DEBIT",
+    initialBalance: "1000",
+    creditLimit: null,
+    billingDate: null,
+  };
+
+  beforeEach(() => {
+    prisma = {
+      account: { findUnique: jest.fn().mockResolvedValue(debitAccount) },
+      accountPayment: { groupBy: jest.fn().mockResolvedValue([]) },
+      transaction: { groupBy: jest.fn().mockResolvedValue([]) },
+      loan: { groupBy: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
+      loanPayment: { groupBy: jest.fn().mockResolvedValue([]) },
+    };
+    service = new AccountsService(prisma as unknown as PrismaService);
+  });
+
+  it("queries loan.groupBy with isExternal: false so an already-lent loan never counts against the balance", async () => {
+    // Simulates the DB filter actually excluding the external loan —
+    // proves the query itself asks for isExternal: false, not just that
+    // withComputedBalance would ignore it if it were passed in.
+    prisma.loan.groupBy.mockImplementation((args: { where: { isExternal?: boolean } }) =>
+      Promise.resolve(args.where.isExternal === false ? [] : [{ accountId: "acc-1", _sum: { totalAmount: 500 } }]),
+    );
+
+    const result = await service.findOne("u1", "acc-1");
+
+    expect(prisma.loan.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ isExternal: false }) }),
+    );
+    expect(result.currentBalance).toBe(1000); // untouched — the 500 "external" loan isn't in this filtered result
+  });
+
+  it("excludes external loans from an account's LOAN_OUT movement ledger", async () => {
+    prisma.loan.findMany.mockImplementation((args: { where: { isExternal?: boolean } }) =>
+      Promise.resolve(args.where.isExternal === false ? [] : [{ id: "loan-1", totalAmount: "500", createdAt: new Date(), borrowerName: "Juan" }]),
+    );
+    const prismaFull = {
+      ...prisma,
+      transaction: { ...prisma.transaction, findMany: jest.fn().mockResolvedValue([]) },
+      accountPayment: { ...prisma.accountPayment, findMany: jest.fn().mockResolvedValue([]) },
+      loanPayment: { ...prisma.loanPayment, findMany: jest.fn().mockResolvedValue([]) },
+    };
+    service = new AccountsService(prismaFull as unknown as PrismaService);
+
+    const movements = await service.getMovements("u1", "acc-1");
+
+    expect(prisma.loan.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ isExternal: false }) }),
+    );
+    expect(movements.find((m) => m.kind === "LOAN_OUT")).toBeUndefined();
+  });
+});

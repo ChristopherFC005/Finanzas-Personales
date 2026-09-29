@@ -1,6 +1,7 @@
 import { LoanPaymentType } from "@prisma/client";
 import { Transform } from "class-transformer";
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
@@ -36,9 +37,19 @@ export class CreateLoanDto {
   @IsEnum(LoanPaymentType)
   paymentType!: LoanPaymentType;
 
-  // De qué cuenta/tarjeta sale el dinero prestado — se descuenta de su saldo.
+  // De qué cuenta/tarjeta sale el dinero prestado — se descuenta de su saldo,
+  // salvo que isExternal sea true (ver abajo), en cuyo caso solo es la cuenta
+  // que recibirá los cobros.
   @IsUUID()
   accountId!: string;
+
+  // true = el dinero ya se prestó fuera de la app (efectivo, ya entregado
+  // antes de registrar esto): no se descuenta de accountId, solo se anota
+  // para poder cobrarlo. false/omitido = comportamiento normal.
+  @IsOptional()
+  @Transform(emptyToUndefined)
+  @IsBoolean()
+  isExternal?: boolean;
 
   // Requerido solo cuando paymentType = SINGLE (validado en el service,
   // porque depende del valor de otro campo).

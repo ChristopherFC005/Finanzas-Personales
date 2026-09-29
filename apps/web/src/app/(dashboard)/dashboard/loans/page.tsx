@@ -35,6 +35,7 @@ export default function LoansPage() {
   } = useForm<LoanInput>({ defaultValues: { paymentType: "SINGLE" } });
 
   const paymentType = watch("paymentType");
+  const isExternal = watch("isExternal");
   const totalAmount = watch("totalAmount");
   const installmentsCount = watch("installmentsCount");
   const perInstallment =
@@ -58,6 +59,7 @@ export default function LoansPage() {
       totalAmount: values.totalAmount,
       paymentType: values.paymentType,
       accountId: values.accountId,
+      isExternal: values.isExternal ?? false,
       notes: values.notes || undefined,
       ...(values.paymentType === "SINGLE"
         ? { dueDate: values.dueDate }
@@ -67,7 +69,7 @@ export default function LoansPage() {
           }),
     };
     await createLoan.mutateAsync(payload);
-    reset({ paymentType: "SINGLE" });
+    reset({ paymentType: "SINGLE", isExternal: false });
     setOpen(false);
   }
 
@@ -148,8 +150,21 @@ export default function LoansPage() {
             />
           </div>
 
+          <label className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5 text-sm text-foreground">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-border"
+              {...register("isExternal")}
+            />
+            Ya presté este dinero (fuera de la app) — solo quiero anotarlo para cobrarlo
+          </label>
+
           <div>
-            <Label htmlFor="accountId">¿Desde qué cuenta o tarjeta sale el dinero?</Label>
+            <Label htmlFor="accountId">
+              {isExternal
+                ? "¿A qué cuenta o tarjeta quieres que entre el cobro?"
+                : "¿Desde qué cuenta o tarjeta sale el dinero?"}
+            </Label>
             <Select id="accountId" {...register("accountId", { required: true })}>
               <option value="">Selecciona…</option>
               {accounts?.map((a) => (
@@ -161,6 +176,11 @@ export default function LoansPage() {
             </Select>
             {errors.accountId && (
               <p className="mt-1 text-xs text-danger">Selecciona una cuenta.</p>
+            )}
+            {isExternal && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                El monto no se descuenta de esta cuenta — solo se le sumará cuando registres los cobros.
+              </p>
             )}
           </div>
 

@@ -91,7 +91,12 @@ export class AccountsService {
       }),
       this.prisma.loan.groupBy({
         by: ["accountId"],
-        where: { userId, accountId: { in: accountIds }, status: { not: "CANCELLED" } },
+        where: {
+          userId,
+          accountId: { in: accountIds },
+          status: { not: "CANCELLED" },
+          isExternal: false,
+        },
         _sum: { totalAmount: true },
       }),
       this.prisma.loanPayment.groupBy({
@@ -131,7 +136,7 @@ export class AccountsService {
       }),
       this.prisma.loan.groupBy({
         by: ["accountId"],
-        where: { userId, accountId: id, status: { not: "CANCELLED" } },
+        where: { userId, accountId: id, status: { not: "CANCELLED" }, isExternal: false },
         _sum: { totalAmount: true },
       }),
       this.prisma.loanPayment.groupBy({
@@ -221,7 +226,7 @@ export class AccountsService {
         orderBy: { paidAt: "desc" },
       }),
       this.prisma.loan.findMany({
-        where: { userId, accountId: id, status: { not: "CANCELLED" } },
+        where: { userId, accountId: id, status: { not: "CANCELLED" }, isExternal: false },
         orderBy: { createdAt: "desc" },
       }),
       this.prisma.loanPayment.findMany({
@@ -377,7 +382,13 @@ export class AccountsService {
           _sum: { amount: true },
         }),
         this.prisma.loan.aggregate({
-          where: { userId, accountId: account.id, status: { not: "CANCELLED" }, createdAt: { lte: cutoff } },
+          where: {
+            userId,
+            accountId: account.id,
+            status: { not: "CANCELLED" },
+            isExternal: false,
+            createdAt: { lte: cutoff },
+          },
           _sum: { totalAmount: true },
         }),
         this.prisma.loanPayment.aggregate({

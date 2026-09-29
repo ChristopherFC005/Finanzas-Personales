@@ -327,6 +327,10 @@ model Loan {
   installmentsCount Int?            @map("installments_count") @db.SmallInt
   firstDueDate      DateTime?       @map("first_due_date") @db.Date
   accountId         String?         @map("account_id") @db.Uuid
+  // Money already lent outside the app (e.g. cash handed over before this
+  // loan was ever registered) — the amount must NOT be deducted from the
+  // funding account's balance, only repayments credited back count.
+  isExternal        Boolean         @default(false) @map("is_external")
   notes             String?
   status            LoanStatus      @default(ACTIVE)
   createdAt         DateTime        @default(now()) @map("created_at")

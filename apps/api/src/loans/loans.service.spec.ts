@@ -106,6 +106,57 @@ describe("LoansService", () => {
     });
   });
 
+  describe("external loans (already lent outside the app)", () => {
+    it("persists isExternal: true so the funding account isn't debited", async () => {
+      prisma.account.findUnique.mockResolvedValue({ id: "acc-1", userId: "u1" });
+      prisma.loan.create.mockResolvedValue({
+        id: "loan-1",
+        userId: "u1",
+        totalAmount: "500",
+        accountId: "acc-1",
+        isExternal: true,
+        status: "ACTIVE",
+      });
+
+      await service.create("u1", {
+        borrowerName: "Juan",
+        totalAmount: "500",
+        paymentType: "SINGLE",
+        dueDate: "2026-01-01",
+        accountId: "acc-1",
+        isExternal: true,
+      } as never);
+
+      expect(prisma.loan.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ isExternal: true }) }),
+      );
+    });
+
+    it("defaults isExternal to false when omitted", async () => {
+      prisma.account.findUnique.mockResolvedValue({ id: "acc-1", userId: "u1" });
+      prisma.loan.create.mockResolvedValue({
+        id: "loan-1",
+        userId: "u1",
+        totalAmount: "500",
+        accountId: "acc-1",
+        isExternal: false,
+        status: "ACTIVE",
+      });
+
+      await service.create("u1", {
+        borrowerName: "Juan",
+        totalAmount: "500",
+        paymentType: "SINGLE",
+        dueDate: "2026-01-01",
+        accountId: "acc-1",
+      } as never);
+
+      expect(prisma.loan.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ isExternal: false }) }),
+      );
+    });
+  });
+
   describe("registering a repayment credits the funding account", () => {
     it("copies the loan's accountId onto the created LoanPayment", async () => {
       const loan = {
