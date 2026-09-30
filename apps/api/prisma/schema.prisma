@@ -142,6 +142,7 @@ model Profile {
   goalCollaboratorsInvited GoalCollaborator[] @relation("GoalCollaboratorInvitedBy")
   goalInvitesCreated      GoalInvite[]       @relation("GoalInviteCreatedBy")
   goalInvitesAccepted     GoalInvite[]       @relation("GoalInviteAcceptedBy")
+  budgets                 Budget[]
 
   @@map("profiles")
 }
@@ -157,9 +158,29 @@ model Category {
 
   user         Profile?      @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  budgets      Budget[]
 
   @@index([userId])
   @@map("categories")
+}
+
+model Budget {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  categoryId      String   @map("category_id") @db.Uuid
+  amount          Decimal  @db.Decimal(14, 2)
+  month           Int      @db.SmallInt
+  year            Int      @db.SmallInt
+  alertPercentage Int      @default(80) @map("alert_percentage") @db.SmallInt
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user     Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId, month, year])
+  @@index([userId, year, month])
+  @@map("budgets")
 }
 
 model Account {
