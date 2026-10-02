@@ -1,6 +1,7 @@
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { GoalsService } from "./goals.service";
 import { PrismaService } from "../common/prisma/prisma.service";
+import { NotificationsService } from "../notifications/notifications.service";
 
 describe("GoalsService — sharing a goal with another person", () => {
   let service: GoalsService;
@@ -13,13 +14,15 @@ describe("GoalsService — sharing a goal with another person", () => {
       update: jest.Mock;
       updateMany: jest.Mock;
     };
-    goalCollaborator: { findUnique: jest.Mock; create: jest.Mock };
+    goalCollaborator: { findUnique: jest.Mock; findMany: jest.Mock; create: jest.Mock };
     goalInvite: { findUnique: jest.Mock; create: jest.Mock; update: jest.Mock };
     goalMovement: { create: jest.Mock };
+    profile: { findUnique: jest.Mock };
     $transaction: jest.Mock;
   };
+  let notifications: { create: jest.Mock };
 
-  const ownedGoal = { id: "goal-1", userId: "owner-1", targetAmount: "1000", currentAmount: "0", status: "ACTIVE" };
+  const ownedGoal = { id: "goal-1", userId: "owner-1", targetAmount: "1000", currentAmount: "0", status: "ACTIVE", name: "Viaje" };
 
   beforeEach(() => {
     prisma = {
@@ -31,12 +34,17 @@ describe("GoalsService — sharing a goal with another person", () => {
         update: jest.fn(),
         updateMany: jest.fn(),
       },
-      goalCollaborator: { findUnique: jest.fn(), create: jest.fn() },
+      goalCollaborator: { findUnique: jest.fn(), findMany: jest.fn().mockResolvedValue([]), create: jest.fn() },
       goalInvite: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
       goalMovement: { create: jest.fn() },
+      profile: { findUnique: jest.fn().mockResolvedValue({ firstName: "Ana", lastName: "QA" }) },
       $transaction: jest.fn(),
     };
-    service = new GoalsService(prisma as unknown as PrismaService);
+    notifications = { create: jest.fn().mockResolvedValue(undefined) };
+    service = new GoalsService(
+      prisma as unknown as PrismaService,
+      notifications as unknown as NotificationsService,
+    );
   });
 
   describe("createInvite", () => {
@@ -160,6 +168,30 @@ describe("GoalsService — sharing a goal with another person", () => {
       expect(prisma.savingsGoal.findFirst).toHaveBeenCalledWith({
         where: { id: "goal-1", OR: [{ userId: "collaborator-1" }, { collaborators: { some: { userId: "collaborator-1" } } }] },
       });
+    });
+
+    it("notifies the owner (but not the acting collaborator) when a collaborator deposits", async () => {
+      prisma.savingsGoal.findFirst.mockResolvedValue(ownedGoal);
+      prisma.goalCollaborator.findMany.mockResolvedValue([{ userId: "collaborator-1" }]);
+      prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => unknown) => {
+        const tx = {
+          savingsGoal: {
+            update: jest.fn().mockResolvedValue({ ...ownedGoal, currentAmount: "100" }),
+            findUniqueOrThrow: jest.fn().mockResolvedValue({ ...ownedGoal, currentAmount: "100" }),
+          },
+          goalMovement: { create: jest.fn().mockResolvedValue({}) },
+        };
+        return fn(tx);
+      });
+
+      await service.deposit("collaborator-1", "goal-1", { amount: "100" } as never);
+
+      expect(notifications.create).toHaveBeenCalledTimes(1);
+      expect(notifications.create).toHaveBeenCalledWith(
+        "owner-1",
+        expect.any(String),
+        expect.stringContaining("Ana QA"),
+      );
     });
 
     it("rejects deposits from someone who isn't the owner or a collaborator", async () => {

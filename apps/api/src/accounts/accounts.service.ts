@@ -8,6 +8,7 @@ import { PrismaService } from "../common/prisma/prisma.service";
 import { CreateAccountDto } from "./dto/create-account.dto";
 import { UpdateAccountDto } from "./dto/update-account.dto";
 import { PayCreditCardDto } from "./dto/pay-credit-card.dto";
+import { lastCutoffDate } from "./billing-date.util";
 
 interface MovementTotal {
   accountId: string | null;
@@ -38,30 +39,6 @@ interface PaymentSentTotal {
 
 const CARD_DATES_EDIT_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
 const STATEMENT_AMOUNT_EPSILON = 0.01;
-
-function daysInMonth(y: number, m: number): number {
-  return new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-}
-
-/**
- * The most recent billing cutoff on or before `asOf`, recurring monthly on
- * `billingDate`'s day-of-month (clamped to the last day of shorter months,
- * e.g. a day-31 card cuts on Feb 28/29).
- */
-function lastCutoffDate(billingDate: Date, asOf: Date): Date {
-  const day = billingDate.getUTCDate();
-  const y = asOf.getUTCFullYear();
-  const m = asOf.getUTCMonth();
-
-  const thisMonthCutoff = new Date(Date.UTC(y, m, Math.min(day, daysInMonth(y, m))));
-  if (thisMonthCutoff.getTime() <= asOf.getTime()) {
-    return thisMonthCutoff;
-  }
-
-  const prevM = m === 0 ? 11 : m - 1;
-  const prevY = m === 0 ? y - 1 : y;
-  return new Date(Date.UTC(prevY, prevM, Math.min(day, daysInMonth(prevY, prevM))));
-}
 
 @Injectable()
 export class AccountsService {
@@ -357,7 +334,8 @@ export class AccountsService {
    * statement first — the same way a real card statement works — before
    * ever counting toward the newer, not-yet-billed charges.
    */
-  private async getStatementDebt(userId: string, account: Account): Promise<number> {
+  /** Not private: the card-due-date reminder cron (in CardRemindersService) also needs this. */
+  async getStatementDebt(userId: string, account: Account): Promise<number> {
     if (!account.billingDate) return 0;
     const cutoff = lastCutoffDate(account.billingDate, new Date());
 

@@ -5,6 +5,7 @@ import {
 } from "@nestjs/common";
 import { randomBytes } from "crypto";
 import { PrismaService } from "../common/prisma/prisma.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { CreateGoalDto } from "./dto/create-goal.dto";
 import { UpdateGoalDto } from "./dto/update-goal.dto";
 import { CreateMovementDto } from "./dto/create-movement.dto";
@@ -17,7 +18,10 @@ const COLLABORATOR_SELECT = {
 
 @Injectable()
 export class GoalsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async findAll(userId: string) {
     const goals = await this.prisma.savingsGoal.findMany({
@@ -96,6 +100,9 @@ export class GoalsService {
       });
 
       return tx.savingsGoal.findUniqueOrThrow({ where: { id } });
+    }).then(async (goal) => {
+      await this.notifyOthersOfMovement(userId, goal, "DEPOSIT", dto.amount);
+      return goal;
     });
   }
 
@@ -127,6 +134,9 @@ export class GoalsService {
       });
 
       return tx.savingsGoal.findUniqueOrThrow({ where: { id } });
+    }).then(async (goal) => {
+      await this.notifyOthersOfMovement(userId, goal, "WITHDRAWAL", dto.amount);
+      return goal;
     });
   }
 
@@ -190,6 +200,44 @@ export class GoalsService {
     ]);
 
     return this.findOne(userId, invite.goalId);
+  }
+
+  /**
+   * Tells every OTHER participant (owner + collaborators, minus whoever
+   * just acted) that money moved in a shared goal — so a collaborator
+   * finds out their co-saver deposited without having to reopen the page.
+   * Best-effort: runs after the movement is already committed, so a
+   * notification failure never blocks the deposit/withdrawal itself.
+   */
+  private async notifyOthersOfMovement(
+    actorUserId: string,
+    goal: { id: string; userId: string; name: string },
+    type: "DEPOSIT" | "WITHDRAWAL",
+    amount: string,
+  ): Promise<void> {
+    const [collaborators, actor] = await Promise.all([
+      this.prisma.goalCollaborator.findMany({
+        where: { goalId: goal.id },
+        select: { userId: true },
+      }),
+      this.prisma.profile.findUnique({
+        where: { id: actorUserId },
+        select: { firstName: true, lastName: true },
+      }),
+    ]);
+
+    const recipients = new Set([goal.userId, ...collaborators.map((c) => c.userId)]);
+    recipients.delete(actorUserId);
+    if (recipients.size === 0) return;
+
+    const actorName = actor ? `${actor.firstName} ${actor.lastName}`.trim() : "Alguien";
+    const verb = type === "DEPOSIT" ? "aportó" : "retiró";
+    const title = "Movimiento en meta compartida";
+    const body = `${actorName} ${verb} S/ ${amount} en "${goal.name}".`;
+
+    await Promise.all(
+      [...recipients].map((recipientId) => this.notifications.create(recipientId, title, body)),
+    );
   }
 
   /** Strict ownership — for editing, deleting, or inviting to a goal. */

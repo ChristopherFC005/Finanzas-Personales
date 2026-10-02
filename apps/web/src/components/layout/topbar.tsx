@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { NotificationBell } from "./notification-bell";
 
 export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const router = useRouter();
@@ -40,10 +41,13 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
         )}
       </div>
 
-      <Button variant="ghost" size="sm" onClick={handleLogout}>
-        <LogOut className="h-4 w-4" />
-        Salir
-      </Button>
+      <div className="flex items-center gap-2">
+        <NotificationBell />
+        <Button variant="ghost" size="sm" onClick={handleLogout}>
+          <LogOut className="h-4 w-4" />
+          Salir
+        </Button>
+      </div>
     </header>
   );
 }
