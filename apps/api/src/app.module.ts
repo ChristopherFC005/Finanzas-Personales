@@ -11,6 +11,7 @@ import { AccountsModule } from "./accounts/accounts.module";
 import { CategoriesModule } from "./categories/categories.module";
 import { TransactionsModule } from "./transactions/transactions.module";
 import { BudgetsModule } from "./budgets/budgets.module";
+import { FixedIncomesModule } from "./fixed-incomes/fixed-incomes.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { GoalsModule } from "./goals/goals.module";
 import { LoansModule } from "./loans/loans.module";
@@ -37,6 +38,7 @@ import { AiModule } from "./ai/ai.module";
     CategoriesModule,
     TransactionsModule,
     BudgetsModule,
+    FixedIncomesModule,
     NotificationsModule,
     GoalsModule,
     LoansModule,

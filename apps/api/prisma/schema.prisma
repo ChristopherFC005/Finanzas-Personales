@@ -143,6 +143,7 @@ model Profile {
   goalInvitesCreated      GoalInvite[]       @relation("GoalInviteCreatedBy")
   goalInvitesAccepted     GoalInvite[]       @relation("GoalInviteAcceptedBy")
   budgets                 Budget[]
+  fixedIncomes            FixedIncome[]
 
   @@map("profiles")
 }
@@ -159,6 +160,7 @@ model Category {
   user         Profile?      @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
   budgets      Budget[]
+  fixedIncomes FixedIncome[]
 
   @@index([userId])
   @@map("categories")
@@ -204,6 +206,7 @@ model Account {
   paymentsSent    AccountPayment[] @relation("AccountPaymentsSent")
   loans           Loan[]
   loanPayments    LoanPayment[]
+  fixedIncomes    FixedIncome[]
 
   @@index([userId])
   @@map("accounts")
@@ -238,6 +241,10 @@ model Transaction {
   userId           String          @map("user_id") @db.Uuid
   categoryId       String          @map("category_id") @db.Uuid
   accountId        String?         @map("account_id") @db.Uuid
+  // Set only on the transaction a fixed income's cron auto-generated —
+  // lets the job dedupe ("already paid out this month?") without any
+  // text-matching, and lets the UI show which movement came from where.
+  fixedIncomeId    String?         @map("fixed_income_id") @db.Uuid
   type             TransactionType
   amount           Decimal         @db.Decimal(14, 2)
   description      String?
@@ -248,15 +255,41 @@ model Transaction {
   createdAt        DateTime        @default(now()) @map("created_at")
   updatedAt        DateTime        @updatedAt @map("updated_at")
 
-  user     Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  account  Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  user        Profile      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    Category     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  account     Account?     @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  fixedIncome FixedIncome? @relation(fields: [fixedIncomeId], references: [id], onDelete: SetNull)
 
   @@index([userId, transactionDate])
   @@index([userId, categoryId])
   @@index([userId, type, transactionDate])
   @@index([userId, accountId])
+  @@index([fixedIncomeId])
   @@map("transactions")
+}
+
+model FixedIncome {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  categoryId String   @map("category_id") @db.Uuid
+  accountId  String   @map("account_id") @db.Uuid
+  name       String
+  amount     Decimal  @db.Decimal(14, 2)
+  // Recurs monthly on this day (clamped to the last day of shorter months,
+  // same rule as a card's billingDate/paymentDueDate).
+  dayOfMonth Int      @map("day_of_month") @db.SmallInt
+  isActive   Boolean  @default(true) @map("is_active")
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user         Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category     Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  account      Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+  @@map("fixed_incomes")
 }
 
 model SavingsGoal {

@@ -15,7 +15,7 @@ import { QueryTransactionsDto } from "./dto/query-transactions.dto";
 // choice alongside an account) — never trusted from the client when an
 // account is present, so a manipulated request can't claim a debit card
 // purchase was "cash".
-const PAYMENT_METHOD_BY_ACCOUNT_TYPE: Record<Account["type"], PaymentMethod> = {
+export const PAYMENT_METHOD_BY_ACCOUNT_TYPE: Record<Account["type"], PaymentMethod> = {
   CASH: "CASH",
   DEBIT: "DEBIT",
   CREDIT: "CREDIT",

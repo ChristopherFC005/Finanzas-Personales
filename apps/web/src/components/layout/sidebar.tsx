@@ -13,6 +13,7 @@ import {
   UserCircle,
   HandCoins,
   PiggyBank,
+  Banknote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
   { href: "/dashboard/accounts", label: "Cuentas", icon: CreditCard },
   { href: "/dashboard/transactions", label: "Movimientos", icon: ArrowLeftRight },
+  { href: "/dashboard/fixed-incomes", label: "Ingresos fijos", icon: Banknote },
   { href: "/dashboard/goals", label: "Metas", icon: Target },
   { href: "/dashboard/loans", label: "Préstamos", icon: HandCoins },
   { href: "/dashboard/budgets", label: "Presupuestos", icon: PiggyBank },
